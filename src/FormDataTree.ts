@@ -1,13 +1,13 @@
 export type Path = string[];
 
 export interface FormDataTreeNode {
-    tags: { [key: string]: string };
+    tags: { [key: string]: any };
     data: { [key: string]: any };
 }
 
 type FormDataTreeNodeOptional = Partial<FormDataTreeNode>;
 
-type SubscriptionDependency = {kind: "data", value: string} | {king: "tag", value: string} | {kind: "structure", value: "children"}
+type SubscriptionDependency = {kind: "data", value: string} | {kind: "tag", value: string} | {kind: "structure", value: "children"}
 
 interface FormDataTreeSubscription {
     update: (data: FormDataTreeNode) => void;
@@ -81,7 +81,7 @@ function matches(dependency: SubscriptionDependency, change: SubscriptionDepende
 
 function triggerSubscriptions(node: TreeNode, changes: SubscriptionDependency[]) {
     // todo (sivukhin, 19.01.2021): Optimize subscription evaluation with some sort of index?
-    for (const [_, subscription] of node.subscriptions) {
+    for (const [, subscription] of node.subscriptions) {
         let shouldBeTriggered = false;
         for (const dependency of subscription.dependencies) {
             if (shouldBeTriggered) {
@@ -111,11 +111,11 @@ export function createDataTree(): FormDataTree {
             const dependencies: SubscriptionDependency[] = [];
             if (node != null && node.data != null) {
                 currentNode.dataNode.data = {...currentNode.dataNode.data, ...node.data};
-                dependencies.push(...Object.keys(node.data).map(x => ({kind: "data", value: x})))
+                dependencies.push(...Object.keys(node.data).map(x => ({kind: "data", value: x} as SubscriptionDependency)))
             }
             if (node != null && node.tags != null) {
                 currentNode.dataNode.tags = {...currentNode.dataNode.tags, ...node.tags};
-                dependencies.push(...Object.keys(node.tags).map(x => ({kind: "tag", value: x})))
+                dependencies.push(...Object.keys(node.tags).map(x => ({kind: "tag", value: x} as SubscriptionDependency)))
             }
 
             if (dependencies.length > 0) {

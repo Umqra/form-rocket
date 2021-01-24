@@ -1,21 +1,7 @@
-import {createDataTree, FormDataTree, Path} from "./FormDataTree";
 import * as _ from "lodash"; // todo (sivukhin, 23.01.2021): Optimize huge lodash import
 
-export type FormTemplate = {
-    kind: "static",
-    key: string;
-    tags?: {
-        [key: string]: string;
-    };
-    children: FormTemplate[]
-} | {
-    kind: "array",
-    key: string,
-    tags?: {
-        [key: string]: string;
-    };
-    template: FormTemplate
-}
+import {FormDataTree, Path} from "./FormDataTree";
+import {FormTemplate} from "./FormTemplate";
 
 interface FormSubscription {
     update(dataPath: Path, value: any): void;
@@ -62,13 +48,13 @@ export function createForm(dataTree: FormDataTree, form: FormTemplate): Form {
     };
 
     function unsubscribeSubTree(dataTree: FormDataTree, nodePath: Path) {
-        for (const [path, unsubscribe] of internalSubscriptions.filter(x => isPrefixOf(nodePath, x[0]))) {
+        for (const [, unsubscribe] of internalSubscriptions.filter(x => isPrefixOf(nodePath, x[0]))) {
             unsubscribe();
         }
         internalSubscriptions = internalSubscriptions.filter(x => !isPrefixOf(nodePath, x[0]));
     }
 
-    function createNode(dataTree: FormDataTree, nodePath: Path, dataPath: Path, form: FormTemplate, data: any) {
+    function createNode(dataTree: FormDataTree, nodePath: Path, dataPath: Path, form: FormTemplate, data: any): [Path, {[key: string]: any}] {
         const nodeTags = form.tags || {};
         let nodeData = {};
         // todo (sivukhin, 23.01.2021): path or dataPath?
@@ -80,7 +66,7 @@ export function createForm(dataTree: FormDataTree, form: FormTemplate): Form {
             dataTree.updateNode(nodePath, {tags: nodeTags, data: nodeData});
             const unsubscribe = dataTree.subscribe(nodePath, {
                 update: (node) => {
-                    for (const [_, subscription] of subscriptions) {
+                    for (const [, subscription] of subscriptions) {
                         subscription.update([...dataPath, ...currentDataPath], node.data.value);
                     }
                 },
@@ -93,7 +79,7 @@ export function createForm(dataTree: FormDataTree, form: FormTemplate): Form {
         return [currentDataPath == null ? null : [...dataPath, ...currentDataPath], nodeData];
     }
 
-    function populatePath(dataTree: FormDataTree, currentNodePath: Path, targetNodePath: Path, dataPath: Path, form: FormTemplate, data: any) {
+    function populatePath(dataTree: FormDataTree, currentNodePath: Path, targetNodePath: Path, dataPath: Path, form: FormTemplate, data: any): [Path, FormTemplate] {
         if (currentNodePath.length >= targetNodePath.length) {
             return [dataPath, form];
         }
@@ -102,7 +88,7 @@ export function createForm(dataTree: FormDataTree, form: FormTemplate): Form {
         }
         const key = targetNodePath[currentNodePath.length];
         let subForm: FormTemplate | null = null;
-        const currentDataPath = dataPath;
+        let currentDataPath: Path = dataPath;
         if (form.kind === "static") {
             subForm = form.children.find(x => x.key === key);
         } else if (form.kind === "array") {
@@ -111,11 +97,9 @@ export function createForm(dataTree: FormDataTree, form: FormTemplate): Form {
             if (node == null || node.tags.path == null) {
                 throw new Error("no node for array template node");
             }
-            currentDataPath = [...currentDataPath, node.tags.path as Path];
-        } else {
-            throw new Error(`unexpected kind of form template: ${form.kind}`);
+            currentDataPath = [...currentDataPath, ...(node.tags.path as Path)];
         }
-        return populatePath(dataTree, [...currentNodePath, targetNodePath[currentDataPath.length]], targetNodePath, currentDataPath, subForm);
+        return populatePath(dataTree, [...currentNodePath, targetNodePath[currentDataPath.length]], targetNodePath, currentDataPath, subForm, data);
     }
 
     function populateTree(dataTree: FormDataTree, nodePath: Path, dataPath: Path, form: FormTemplate, data: any) {
@@ -147,8 +131,6 @@ export function createForm(dataTree: FormDataTree, form: FormTemplate): Form {
                     }
                 }
                 return;
-            default:
-                throw new Error(`unexpected kind of template node: ${template.kind}`);
         }
     }
 }
