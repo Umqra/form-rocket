@@ -13,8 +13,8 @@ const ArrayComponent = configureComponent(function(props: React.PropsWithChildre
     return <div>{props.children}</div>;
 }, {kind: "array"});
 
-test("simple template", () => {
-    const [template] = processReactTemplate(<div>
+test("simple templates", () => {
+    const {templateRoot: template} = processReactTemplate(<div>
         <PropComponent path={["root", "component"]}>
             <div>
                 <ValueComponent/>
@@ -29,32 +29,36 @@ test("simple template", () => {
     </div>);
     expect(template).toEqual({
         kind: "static",
-        key: expect.any(String),
-        tags: {
-            path: ["root", "component"]
-        },
-        children: [
-            {
-                kind: "static",
-                key: expect.any(String),
-                tags: {
-                    type: "huge"
-                },
-                children: []
+        key: "",
+        children: [{
+            kind: "static",
+            key: expect.any(String),
+            tags: {
+                path: ["root", "component"]
             },
-            {
-                kind: "array",
-                key: expect.any(String),
-                tags: {},
-                template: {
+            children: [
+                {
                     kind: "static",
                     key: expect.any(String),
                     tags: {
                         type: "huge"
                     },
                     children: []
-                }
-            },
-        ]
+                },
+                {
+                    kind: "array",
+                    key: expect.any(String),
+                    tags: {},
+                    template: {
+                        kind: "static",
+                        key: expect.any(String),
+                        tags: {
+                            type: "huge"
+                        },
+                        children: []
+                    }
+                },
+            ]
+        }]
     })
 });

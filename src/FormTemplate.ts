@@ -11,7 +11,7 @@ export type FormTemplate = {
     tags?: {
         [key: string]: any;
     };
-    template: FormTemplate
+    templates: FormTemplate[]
 }
 
 export type FormTemplateKind = FormTemplate['kind'];

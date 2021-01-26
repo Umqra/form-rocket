@@ -25,26 +25,33 @@ let x: Message;
 export const MessageTemplate = (
     <Form>
         <Line caption={"Номер заказа"}>
-            <Input path={() => x.orderNumber}/>
+            <Input path={["orderNumber"]}/>
         </Line>
         <Line caption={"Поставщик"}>
             <Line caption={"Наименование"}>
-                <Input path={() => x.supplier.name}/>
+                <Input path={["supplier", "name"]}/>
             </Line>
             <Line caption={"GLN"}>
-                <Input path={() => x.supplier.gln}/>
+                <Input path={["supplier", "gln"]}/>
             </Line>
         </Line>
         <Line caption={"Покупатель"}>
             <Line caption={"Наименование"}>
-                <Input path={() => x.buyer.name}/>
+                <Input path={["buyer", "name"]}/>
             </Line>
             <Line caption={"GLN"}>
-                <Input path={() => x.buyer.gln}/>
+                <Input path={["buyer", "gln"]}/>
             </Line>
         </Line>
         <Line caption={"Товары"}>
-            <Array path={() => x.goodItems}
+            <Array path={["items"]}>
+                <Line caption={"Наименование"}>
+                    <Input path={["name"]}/>
+                </Line>
+                <Line caption={"GTIN"}>
+                    <Input path={["gtin"]}/>
+                </Line>
+            </Array>
         </Line>
     </Form>
 );

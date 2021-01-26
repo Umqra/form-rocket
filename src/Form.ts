@@ -29,12 +29,12 @@ export function createForm(dataTree: FormDataTree, form: FormTemplate): Form {
     const subscriptions: Array<[number, FormSubscription]> = [];
 
     let internalSubscriptions: Array<[Path, () => void]> = [];
-    populateTree(dataTree, [form.key], [], form, {}); 
+    populateTree(dataTree, [], [], form, {});
     
     return {
         update: (nodePath, data) => {
             unsubscribeSubTree(dataTree, nodePath);
-            const [dataPath, subForm] = populatePath(dataTree, [form.key], nodePath, [], form, data);
+            const [dataPath, subForm] = populatePath(dataTree, [], nodePath, [], form, data);
             populateTree(dataTree, nodePath, dataPath, subForm, data);
         },
         subscribe: (subscription) => {
@@ -56,7 +56,7 @@ export function createForm(dataTree: FormDataTree, form: FormTemplate): Form {
 
     function createNode(dataTree: FormDataTree, nodePath: Path, dataPath: Path, form: FormTemplate, data: any): [Path, {[key: string]: any}] {
         const nodeTags = form.tags || {};
-        let nodeData = {};
+        let nodeData: {value: any} = {value: undefined};
         // todo (sivukhin, 23.01.2021): path or dataPath?
         const currentDataPath = nodeTags.path;
         if (currentDataPath != null) {
@@ -73,8 +73,9 @@ export function createForm(dataTree: FormDataTree, form: FormTemplate): Form {
                 dependencies: [{kind: "data", value: "value"}]
             });
             internalSubscriptions.push([nodePath, unsubscribe]);
-        } else {
-            dataTree.updateNode(nodePath, {tags: nodeTags});
+        } else if (form.kind === "array" && currentDataPath != null) {
+            const keys = nodeData.value == null ? [] : Object.keys(nodeData.value);
+            dataTree.updateNode(nodePath, {tags: nodeTags, data: {value: keys}});
         }
         return [currentDataPath == null ? null : [...dataPath, ...currentDataPath], nodeData];
     }
@@ -86,20 +87,26 @@ export function createForm(dataTree: FormDataTree, form: FormTemplate): Form {
         if (dataTree.tryGetNode(currentNodePath) == null) {
             createNode(dataTree, currentNodePath, dataPath, form, data);
         }
-        const key = targetNodePath[currentNodePath.length];
         let subForm: FormTemplate | null = null;
         let currentDataPath: Path = dataPath;
         if (form.kind === "static") {
+            const key = targetNodePath[currentNodePath.length];
             subForm = form.children.find(x => x.key === key);
+            return populatePath(dataTree, [...currentNodePath, key], targetNodePath, currentDataPath, subForm, data);
         } else if (form.kind === "array") {
-            subForm = form.template;
+            if (currentNodePath.length + 1 >= targetNodePath.length) {
+                throw new Error("path must contain both array children index and template key");
+            }
+            const index = targetNodePath[currentNodePath.length]
+            const key = targetNodePath[currentNodePath.length + 1];
+            subForm = form.templates.find(x => x.key === key);
             const node = dataTree.tryGetNode(currentNodePath);
             if (node == null || node.tags.path == null) {
-                throw new Error("no node for array template node");
+                throw new Error("no node for array templates node");
             }
-            currentDataPath = [...currentDataPath, ...(node.tags.path as Path)];
+            currentDataPath = [...currentDataPath, ...(node.tags.path as Path), key];
+            return populatePath(dataTree, [...currentNodePath, index, key], targetNodePath, currentDataPath, subForm, data);
         }
-        return populatePath(dataTree, [...currentNodePath, targetNodePath[currentDataPath.length]], targetNodePath, currentDataPath, subForm, data);
     }
 
     function populateTree(dataTree: FormDataTree, nodePath: Path, dataPath: Path, form: FormTemplate, data: any) {
@@ -121,9 +128,11 @@ export function createForm(dataTree: FormDataTree, form: FormTemplate): Form {
                 const length = nodeData.value == null ? 0 : nodeData.value.length;
                 for (let i = 0; i < length; i++) {
                     itemIds.add(i.toString());
-                    const itemNodePath = [...nodePath, i.toString(), form.template.key];
-                    const itemDataPath = [...currentDataPath, i.toString()];
-                    populateTree(dataTree, itemNodePath, itemDataPath, form.template, data);
+                    for (const template of form.templates) {
+                        const itemNodePath = [...nodePath, i.toString(), template.key];
+                        const itemDataPath = [...currentDataPath, i.toString()];
+                        populateTree(dataTree, itemNodePath, itemDataPath, template, data);
+                    }
                 }
                 for (const child of dataTree.children(nodePath)) {
                     if (!itemIds.has(child[child.length - 1])) {
