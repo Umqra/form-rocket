@@ -1,6 +1,6 @@
 import * as React from "react";
 
-import {Path} from "../FormDataTree";
+import {Path} from "../core/Tree";
 
 import {ReactFormContext} from "./ReactFormContext";
 import {ReactPathContext} from "./ReactPathContext";

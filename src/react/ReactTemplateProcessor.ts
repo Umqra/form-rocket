@@ -1,7 +1,7 @@
 import * as React from "react";
 import {nanoid} from "nanoid";
 import {FormTemplate, FormTemplateKind} from "../FormTemplate";
-import {Path} from "../FormDataTree";
+import {Path} from "../core/Tree";
 import {Connect} from "./ReactConnect";
 
 type ReactTemplateTagConfiguration = {

@@ -33,7 +33,6 @@ function ConnectArray(props: Omit<ConnectProps, "kind"> & {children: React.React
 }
 
 function ConnectStatic(props: Omit<ConnectProps, "kind"> & {children: React.ReactNode}) {
-    console.info(props.nodePath);
     const [data, setData] = useFormData(props.nodePath);
     return React.cloneElement(props.template, {
         value: data.value,

@@ -1,7 +1,7 @@
-import { createDataTree } from "./FormDataTree";
+import { createTree } from "./Tree";
 
 test("updateNode", () => {
-    const dataTree = createDataTree();
+    const dataTree = createTree();
     dataTree.updateNode(["root", "a", "0"]);
     dataTree.updateNode(["root", "b", "1"]);
     dataTree.updateNode(["root", "a", "1"]);
@@ -11,7 +11,7 @@ test("updateNode", () => {
 });
 
 test("updateNodeWithData", () => {
-    const dataTree = createDataTree();
+    const dataTree = createTree();
     const leafData = {data: {value: "first", validation: "valid"}, tags: {type: "simple", subtype: "extra-simple"}}
     const internalData = {data: {context: "user-id"}, tags: {name: "Field-Name"}};
     dataTree.updateNode(["root", "a", "0"], leafData);
@@ -37,7 +37,7 @@ test("updateNodeWithData", () => {
 });
 
 test("removeLeafNode", () => {
-    const dataTree = createDataTree();
+    const dataTree = createTree();
     dataTree.updateNode(["root", "a", "0"]);
     dataTree.updateNode(["root", "b", "1"]);
     dataTree.updateNode(["root", "a", "1"]);
@@ -48,7 +48,7 @@ test("removeLeafNode", () => {
 });
 
 test("removeInternalNode", () => {
-    const dataTree = createDataTree();
+    const dataTree = createTree();
     dataTree.updateNode(["root", "a", "0"]);
     dataTree.updateNode(["root", "b", "1"]);
     dataTree.updateNode(["root", "a", "1"]);
@@ -58,7 +58,7 @@ test("removeInternalNode", () => {
 });
 
 test("addThenRemoveNode", () => {
-    const dataTree = createDataTree();
+    const dataTree = createTree();
     dataTree.updateNode(["root", "a", "0"]);
     dataTree.updateNode(["root", "b", "1"]);
     dataTree.updateNode(["root", "a", "1"]);
@@ -74,7 +74,7 @@ test("subscribeDataUpdate", () => {
     const payload = () => {
         return {data: {value: payloadId++}};
     }
-    const dataTree = createDataTree();
+    const dataTree = createTree();
     dataTree.updateNode(["root", "1"], payload());
     dataTree.updateNode(["root", "2"], payload());
     const subscriptionCalls: any[] = [];
@@ -91,7 +91,7 @@ test("subscribeDataUpdate", () => {
 });
 
 test("subscribeChildrenUpdate", () => {
-    const dataTree = createDataTree();
+    const dataTree = createTree();
     dataTree.updateNode(["root", "a", "0"]);
     const subscriptionCalls: any[] = [];
     dataTree.subscribe(["root", "a"], {
@@ -117,7 +117,7 @@ test("subscribeChildrenUpdate", () => {
 });
 
 test("unsubscribe", () => {
-    const dataTree = createDataTree();
+    const dataTree = createTree();
     dataTree.updateNode(["root", "1"]);
     dataTree.updateNode(["root", "2"]);
     const subscriptionCalls: any[] = [];

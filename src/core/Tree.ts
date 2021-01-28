@@ -1,44 +1,44 @@
 export type Path = string[];
 
-export interface FormDataTreeNode {
+export interface TreeNode {
     tags: { [key: string]: any };
     data: { [key: string]: any };
 }
 
-type FormDataTreeNodeOptional = Partial<FormDataTreeNode>;
+type TreeNodeOptional = Partial<TreeNode>;
 
 type SubscriptionDependency = {kind: "data", value: string} | {kind: "tag", value: string} | {kind: "structure", value: "children"}
 
-interface FormDataTreeSubscription {
-    update: (data: FormDataTreeNode) => void;
+interface TreeSubscription {
+    update: (data: TreeNode) => void;
     dependencies: SubscriptionDependency[];
 }
 
-export interface FormDataTree {
-    updateNode(nodePath: Path, node?: FormDataTreeNodeOptional): void;
+export interface Tree {
+    updateNode(nodePath: Path, node?: TreeNodeOptional): void;
     removeNode(nodePath: Path): void;
-    tryGetNode(nodePath: Path): FormDataTreeNode | null;
-    subscribe(nodePath: Path, subscription: FormDataTreeSubscription): () => void;
+    tryGetNode(nodePath: Path): TreeNode | null;
+    subscribe(nodePath: Path, subscription: TreeSubscription): () => void;
     children(nodePath: Path): Path[];
 }
 
-interface TreeNode {
+interface InternalTreeNode {
     children: {
-        [key: string]: TreeNode
+        [key: string]: InternalTreeNode
     };
-    dataNode: FormDataTreeNode;
-    subscriptions: Array<[number, FormDataTreeSubscription]>;
+    node: TreeNode;
+    subscriptions: Array<[number, TreeSubscription]>;
 }
 
-function createEmptyNode(): TreeNode {
+function createEmptyNode(): InternalTreeNode {
     return {
         children: {},
-        dataNode: { data: {}, tags: {} },
+        node: { data: {}, tags: {} },
         subscriptions: [],
     };
 }
 
-function addNode(root: TreeNode, nodePath: Path, l: number, r: number): TreeNode {
+function addNode(root: InternalTreeNode, nodePath: Path, l: number, r: number): InternalTreeNode {
     if (l >= r) {
         return root;
     }
@@ -49,7 +49,7 @@ function addNode(root: TreeNode, nodePath: Path, l: number, r: number): TreeNode
     return addNode(root.children[id], nodePath, l + 1, r);
 }
 
-function getNode(root: TreeNode, nodePath: Path, l: number, r: number): TreeNode | null {
+function getNode(root: InternalTreeNode, nodePath: Path, l: number, r: number): InternalTreeNode | null {
     if (l >= r) {
         return root;
     }
@@ -60,7 +60,7 @@ function getNode(root: TreeNode, nodePath: Path, l: number, r: number): TreeNode
     return getNode(root.children[id], nodePath, l + 1, r);
 }
 
-function removeNode(root: TreeNode, nodePath: Path, l: number, r: number) {
+function removeNode(root: InternalTreeNode, nodePath: Path, l: number, r: number) {
     if (l >= r) {
         return;
     }
@@ -79,7 +79,7 @@ function matches(dependency: SubscriptionDependency, change: SubscriptionDepende
     return dependency.value === change.value;
 }
 
-function triggerSubscriptions(node: TreeNode, changes: SubscriptionDependency[]) {
+function triggerSubscriptions(node: InternalTreeNode, changes: SubscriptionDependency[]) {
     // todo (sivukhin, 19.01.2021): Optimize subscription evaluation with some sort of index?
     for (const [, subscription] of node.subscriptions) {
         let shouldBeTriggered = false;
@@ -95,26 +95,26 @@ function triggerSubscriptions(node: TreeNode, changes: SubscriptionDependency[])
             }
         }
         if (shouldBeTriggered) {
-            subscription.update(node.dataNode);
+            subscription.update(node.node);
         }
     }
 }
 
-export function createDataTree(): FormDataTree {
+export function createTree(): Tree {
     const root = createEmptyNode();
     let subscriptionId = 0;
     return {
-        updateNode(nodePath: Path, node?: FormDataTreeNodeOptional) {
+        updateNode(nodePath: Path, node?: TreeNodeOptional) {
             const previousNode = getNode(root, nodePath, 0, nodePath.length);
             const currentNode = addNode(root, nodePath, 0, nodePath.length);
 
             const dependencies: SubscriptionDependency[] = [];
             if (node != null && node.data != null) {
-                currentNode.dataNode.data = {...currentNode.dataNode.data, ...node.data};
+                currentNode.node.data = {...currentNode.node.data, ...node.data};
                 dependencies.push(...Object.keys(node.data).map(x => ({kind: "data", value: x} as SubscriptionDependency)))
             }
             if (node != null && node.tags != null) {
-                currentNode.dataNode.tags = {...currentNode.dataNode.tags, ...node.tags};
+                currentNode.node.tags = {...currentNode.node.tags, ...node.tags};
                 dependencies.push(...Object.keys(node.tags).map(x => ({kind: "tag", value: x} as SubscriptionDependency)))
             }
 
@@ -143,7 +143,7 @@ export function createDataTree(): FormDataTree {
             if (treeNode == null) {
                 return null;
             }
-            return treeNode.dataNode;
+            return treeNode.node;
         },
         children: (nodePath: Path) => {
             const treeNode = getNode(root, nodePath, 0, nodePath.length);
@@ -152,7 +152,7 @@ export function createDataTree(): FormDataTree {
             }
             return Object.keys(treeNode.children).map(x => [...nodePath, x]);
         },
-        subscribe: (nodePath: Path, options: FormDataTreeSubscription) => {
+        subscribe: (nodePath: Path, options: TreeSubscription) => {
             const treeNode = getNode(root, nodePath, 0, nodePath.length);
             if (treeNode == null) {
                 return () => {

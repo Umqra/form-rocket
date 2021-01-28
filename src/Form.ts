@@ -1,6 +1,6 @@
 import * as _ from "lodash"; // todo (sivukhin, 23.01.2021): Optimize huge lodash import
 
-import {FormDataTree, Path} from "./FormDataTree";
+import {Tree, Path} from "./core/Tree";
 import {FormTemplate} from "./FormTemplate";
 
 interface FormSubscription {
@@ -24,7 +24,7 @@ function isPrefixOf<T>(prefix: T[], array: T[]) {
     return true;
 }
 
-export function createForm(dataTree: FormDataTree, form: FormTemplate): Form {
+export function createForm(dataTree: Tree, form: FormTemplate): Form {
     let subscriptionId = 0;
     const subscriptions: Array<[number, FormSubscription]> = [];
 
@@ -47,14 +47,14 @@ export function createForm(dataTree: FormDataTree, form: FormTemplate): Form {
         }
     };
 
-    function unsubscribeSubTree(dataTree: FormDataTree, nodePath: Path) {
+    function unsubscribeSubTree(dataTree: Tree, nodePath: Path) {
         for (const [, unsubscribe] of internalSubscriptions.filter(x => isPrefixOf(nodePath, x[0]))) {
             unsubscribe();
         }
         internalSubscriptions = internalSubscriptions.filter(x => !isPrefixOf(nodePath, x[0]));
     }
 
-    function createNode(dataTree: FormDataTree, nodePath: Path, dataPath: Path, form: FormTemplate, data: any): [Path, {[key: string]: any}] {
+    function createNode(dataTree: Tree, nodePath: Path, dataPath: Path, form: FormTemplate, data: any): [Path, {[key: string]: any}] {
         const nodeTags = form.tags || {};
         let nodeData: {value: any} = {value: undefined};
         // todo (sivukhin, 23.01.2021): path or dataPath?
@@ -80,7 +80,7 @@ export function createForm(dataTree: FormDataTree, form: FormTemplate): Form {
         return [currentDataPath == null ? null : [...dataPath, ...currentDataPath], nodeData];
     }
 
-    function populatePath(dataTree: FormDataTree, currentNodePath: Path, targetNodePath: Path, dataPath: Path, form: FormTemplate, data: any): [Path, FormTemplate] {
+    function populatePath(dataTree: Tree, currentNodePath: Path, targetNodePath: Path, dataPath: Path, form: FormTemplate, data: any): [Path, FormTemplate] {
         if (currentNodePath.length >= targetNodePath.length) {
             return [dataPath, form];
         }
@@ -109,7 +109,7 @@ export function createForm(dataTree: FormDataTree, form: FormTemplate): Form {
         }
     }
 
-    function populateTree(dataTree: FormDataTree, nodePath: Path, dataPath: Path, form: FormTemplate, data: any) {
+    function populateTree(dataTree: Tree, nodePath: Path, dataPath: Path, form: FormTemplate, data: any) {
         const [currentDataPath, nodeData] = createNode(dataTree, nodePath, dataPath, form, data);
         switch (form.kind) {
             case "static":

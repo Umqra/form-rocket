@@ -21,7 +21,6 @@ interface Message {
     goodItems: GoodItem[];
 }
 
-let x: Message;
 export const MessageTemplate = (
     <Form>
         <Line caption={"Номер заказа"}>

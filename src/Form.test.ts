@@ -1,8 +1,8 @@
 import { createForm } from "./Form";
-import { createDataTree } from "./FormDataTree";
+import { createTree } from "./core/Tree";
 
 test("simpleForm", () => {
-    const dataTree = createDataTree();
+    const dataTree = createTree();
     const form = createForm(dataTree, {
         kind: "static",
         key: "",
@@ -54,7 +54,7 @@ test("simpleForm", () => {
 });
 
 test("arrayForm", () => {
-    const dataTree = createDataTree();
+    const dataTree = createTree();
     const form = createForm(dataTree, {
         kind: "static",
         key: "",
@@ -102,7 +102,7 @@ test("arrayForm", () => {
 });
 
 test("partialUpdate", () => {
-    const dataTree = createDataTree();
+    const dataTree = createTree();
     const form = createForm(dataTree, {
         kind: "static",
         key: "",
@@ -159,7 +159,7 @@ test("partialUpdate", () => {
 });
 
 test("arrayNode value", () => {
-    const dataTree = createDataTree();
+    const dataTree = createTree();
     const form = createForm(dataTree, {
         kind: "static",
         key: "",
