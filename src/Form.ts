@@ -2,14 +2,19 @@ import * as _ from "lodash"; // todo (sivukhin, 23.01.2021): Optimize huge lodas
 
 import {Tree, Path} from "./core/Tree";
 import {FormTemplate} from "./FormTemplate";
+import {LinkedTrees} from "./core/LinkedTrees";
 
 interface FormSubscription {
-    update(dataPath: Path, value: any): void;
+    notify(data: any, changes: Path[]): void;
+}
+
+interface FormSubscriptionResult {
+    update(dataPath: Path, update: any): void;
+    unsubscribe(): void;
 }
 
 export interface Form {
-    update(nodePath: Path, data: any): void;
-    subscribe(subscription: FormSubscription): () => void;
+    attach(subscription?: FormSubscription): FormSubscriptionResult;
 }
 
 function isPrefixOf<T>(prefix: T[], array: T[]) {
@@ -24,121 +29,151 @@ function isPrefixOf<T>(prefix: T[], array: T[]) {
     return true;
 }
 
-export function createForm(dataTree: Tree, form: FormTemplate): Form {
+type Trees = LinkedTrees<{ data: Tree, view: Tree }>;
+
+export function createForm(trees: Trees, form: FormTemplate): Form {
+    let container: {data: any} = {data: {}};
     let subscriptionId = 0;
     const subscriptions: Array<[number, FormSubscription]> = [];
 
     let internalSubscriptions: Array<[Path, () => void]> = [];
-    populateTree(dataTree, [], [], form, {});
-    
+    trees.connect({data: [[]], view: [[]]});
+    populateTree(trees, [], [], form, container.data);
+
     return {
-        update: (nodePath, data) => {
-            unsubscribeSubTree(dataTree, nodePath);
-            const [dataPath, subForm] = populatePath(dataTree, [], nodePath, [], form, data);
-            populateTree(dataTree, nodePath, dataPath, subForm, data);
-        },
-        subscribe: (subscription) => {
-            const currentId = subscriptionId++;
-            subscriptions.push([currentId, subscription]);
-            return () => {
-                const index = subscriptions.findIndex(x => x[0] === currentId);
-                subscriptions.splice(index, 1);
+        attach: (subscription) => {
+            let currentId: number | undefined = undefined;
+            if (subscription != null) {
+                currentId = subscriptionId++;
+                subscriptions.push([currentId, subscription]);
+            }
+            return {
+                unsubscribe: () => {
+                    const index = subscriptions.findIndex(x => x[0] === currentId);
+                    subscriptions.splice(index, 1);
+                },
+                update: (dataPath, update) => {
+                    container = _.set(container, ["data", ...dataPath], update);
+                    unsubscribeSubTree(trees.data, dataPath);
+                    const connections = trees.connections({data: [dataPath]});
+                    for (const viewPath of connections.view) {
+                        const [subForm, subDataPath] = getSubTree([], viewPath, [], form);
+                        populateTree(trees, viewPath, subDataPath, subForm, container.data);
+                    }
+                    for (const [id, subscription] of subscriptions) {
+                        if (id === currentId) {
+                            continue;
+                        }
+                        subscription.notify(container.data, [dataPath]);
+                    }
+                },
             }
         }
     };
 
-    function unsubscribeSubTree(dataTree: Tree, nodePath: Path) {
-        for (const [, unsubscribe] of internalSubscriptions.filter(x => isPrefixOf(nodePath, x[0]))) {
+    function unsubscribeSubTree(dataTree: Tree, dataPath: Path) {
+        for (const [, unsubscribe] of internalSubscriptions.filter(x => isPrefixOf(dataPath, x[0]))) {
             unsubscribe();
         }
-        internalSubscriptions = internalSubscriptions.filter(x => !isPrefixOf(nodePath, x[0]));
+        internalSubscriptions = internalSubscriptions.filter(x => !isPrefixOf(dataPath, x[0]));
     }
 
-    function createNode(dataTree: Tree, nodePath: Path, dataPath: Path, form: FormTemplate, data: any): [Path, {[key: string]: any}] {
-        const nodeTags = form.tags || {};
-        let nodeData: {value: any} = {value: undefined};
-        // todo (sivukhin, 23.01.2021): path or dataPath?
-        const currentDataPath = nodeTags.path;
-        if (currentDataPath != null) {
-            nodeData = {value: _.get(data, [...dataPath, ...currentDataPath])};
-        }
-        if (form.kind === "static" && currentDataPath != null) {
-            dataTree.updateNode(nodePath, {tags: nodeTags, data: nodeData});
-            const unsubscribe = dataTree.subscribe(nodePath, {
-                update: (node) => {
+    function createNode(trees: Trees, viewPath: Path, dataPath: Path, form: FormTemplate, data: any): [Path, any] {
+        trees.view.updateNode(viewPath, {tags: form.tags || {}});
+        if (form.kind === "data-leaf") {
+            const currentDataPath = [...dataPath, ...form.dataPath];
+            const dataValue = _.get(data, currentDataPath);
+            trees.data.updateNode(currentDataPath, {data: {value: dataValue}})
+            const unsubscribe = trees.data.subscribe(currentDataPath, {
+                notify: (node) => {
+                    container = _.set(container, ["data", ...currentDataPath], node.data.value);
                     for (const [, subscription] of subscriptions) {
-                        subscription.update([...dataPath, ...currentDataPath], node.data.value);
+                        subscription.notify(container.data, [currentDataPath]);
                     }
                 },
                 dependencies: [{kind: "data", value: "value"}]
-            });
-            internalSubscriptions.push([nodePath, unsubscribe]);
-        } else if (form.kind === "array" && currentDataPath != null) {
-            const keys = nodeData.value == null ? [] : Object.keys(nodeData.value);
-            dataTree.updateNode(nodePath, {tags: nodeTags, data: {value: keys}});
+            })
+            internalSubscriptions.push([currentDataPath, unsubscribe]);
+            trees.connect({data: [currentDataPath], view: [viewPath]});
+            return [currentDataPath, dataValue];
+        } else if (form.kind === "data-array") {
+            const currentDataPath = [...dataPath, ...form.dataPath];
+            const dataValue = _.get(data, currentDataPath);
+            const nodeData = dataValue == null ? [] : Object.keys(dataValue);
+            trees.data.updateNode(currentDataPath, {data: {value: nodeData}});
+            trees.connect({data: [currentDataPath], view: [viewPath]});
+            return [currentDataPath, dataValue];
         }
-        return [currentDataPath == null ? null : [...dataPath, ...currentDataPath], nodeData];
+        return [dataPath, undefined];
     }
 
-    function populatePath(dataTree: Tree, currentNodePath: Path, targetNodePath: Path, dataPath: Path, form: FormTemplate, data: any): [Path, FormTemplate] {
-        if (currentNodePath.length >= targetNodePath.length) {
-            return [dataPath, form];
+    function getSubTree(currentPath: Path, viewPath: Path, dataPath: Path, form: FormTemplate): [FormTemplate, Path] {
+        if (currentPath.length >= viewPath.length) {
+            return [form, dataPath];
         }
-        if (dataTree.tryGetNode(currentNodePath) == null) {
-            createNode(dataTree, currentNodePath, dataPath, form, data);
-        }
-        let subForm: FormTemplate | null = null;
-        let currentDataPath: Path = dataPath;
-        if (form.kind === "static") {
-            const key = targetNodePath[currentNodePath.length];
-            subForm = form.children.find(x => x.key === key);
-            return populatePath(dataTree, [...currentNodePath, key], targetNodePath, currentDataPath, subForm, data);
-        } else if (form.kind === "array") {
-            if (currentNodePath.length + 1 >= targetNodePath.length) {
-                throw new Error("path must contain both array children index and template key");
+        if (form.kind === "data-array") {
+            if (currentPath.length + 1 >= viewPath.length) {
+                throw new Error("viewPath can't end in the middle of the 'data-array' template node");
             }
-            const index = targetNodePath[currentNodePath.length]
-            const key = targetNodePath[currentNodePath.length + 1];
-            subForm = form.templates.find(x => x.key === key);
-            const node = dataTree.tryGetNode(currentNodePath);
-            if (node == null || node.tags.path == null) {
-                throw new Error("no node for array templates node");
-            }
-            currentDataPath = [...currentDataPath, ...(node.tags.path as Path), key];
-            return populatePath(dataTree, [...currentNodePath, index, key], targetNodePath, currentDataPath, subForm, data);
+            const viewIndex = viewPath[currentPath.length];
+            const viewTemplate = viewPath[currentPath.length + 1];
+            return getSubTree(
+                [...currentPath, viewIndex, viewTemplate],
+                viewPath,
+                [...dataPath, ...form.dataPath, viewIndex],
+                form.templates.find(t => t.viewKey === viewTemplate)
+            );
+        } else if (form.kind === "data-leaf") {
+            throw new Error("too long template path");
+        } else if (form.kind === "view") {
+            const viewTemplate = viewPath[currentPath.length];
+            return getSubTree(
+                [...currentPath, viewTemplate],
+                viewPath,
+                dataPath,
+                form.children.find(t => t.viewKey === viewTemplate)
+            );
         }
     }
 
-    function populateTree(dataTree: Tree, nodePath: Path, dataPath: Path, form: FormTemplate, data: any) {
-        const [currentDataPath, nodeData] = createNode(dataTree, nodePath, dataPath, form, data);
+    function populateTree(trees: Trees, viewPath: Path, dataPath: Path, form: FormTemplate, data: any) {
+        const [currentDataPath, nodeData] = createNode(trees, viewPath, dataPath, form, data);
         switch (form.kind) {
-            case "static":
+            case "view":
                 for (const child of form.children) {
-                    populateTree(dataTree, [...nodePath, child.key], dataPath, child, data);
+                    populateTree(trees, [...viewPath, child.viewKey], dataPath, child, data);
                 }
                 return;
-            case "array":
+            case "data-array":
                 if (currentDataPath == null) {
-                    throw new Error("'array' form node must have the 'path' tags");
+                    throw new Error("'data-array' form node must have the dataPath");
                 }
-                if (nodeData.value != null && !Array.isArray(nodeData.value)) {
-                    throw new Error("'array' form node must bind to the Array object");
+                if (nodeData != null && !Array.isArray(nodeData)) {
+                    throw new Error("'data-array' form node must bind to the Array object");
                 }
                 const itemIds = new Set();
-                const length = nodeData.value == null ? 0 : nodeData.value.length;
+                const length = nodeData == null ? 0 : nodeData.length;
                 for (let i = 0; i < length; i++) {
                     itemIds.add(i.toString());
                     for (const template of form.templates) {
-                        const itemNodePath = [...nodePath, i.toString(), template.key];
+                        trees.connect({view: [[...viewPath, i.toString()]], data: [[...currentDataPath, i.toString()]]});
+                        const itemViewPath = [...viewPath, i.toString(), template.viewKey];
                         const itemDataPath = [...currentDataPath, i.toString()];
-                        populateTree(dataTree, itemNodePath, itemDataPath, template, data);
+                        populateTree(trees, itemViewPath, itemDataPath, template, data);
                     }
                 }
-                for (const child of dataTree.children(nodePath)) {
-                    if (!itemIds.has(child[child.length - 1])) {
-                        dataTree.removeNode(child);
+                for (const dataChild of trees.data.children(currentDataPath)) {
+                    if (!itemIds.has(dataChild[dataChild.length - 1])) {
+                        // todo (sivukhin, 29.01.2021): Remove connections!
+                        trees.data.removeNode(dataChild);
+                        const connections = trees.connections({data: [dataChild]});
+                        for (const viewChild of connections.view) {
+                            trees.view.removeNode(viewChild);
+                        }
                     }
                 }
+                return;
+            case "data-leaf":
                 return;
         }
     }

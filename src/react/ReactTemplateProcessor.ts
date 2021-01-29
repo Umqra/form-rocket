@@ -47,15 +47,15 @@ export function processReactTemplate(element: React.ReactNode): {
     const result = processReactTemplateInternal(element, []);
     return {
         templateRoot: {
-            kind: "static",
-            key: "",
+            kind: "view",
+            viewKey: "",
             children: result.templateRoots
         },
         reactRoot: result.reactRoot
     }
 }
 
-function processReactTemplateInternal(element: React.ReactNode, nodePath: Path): {
+function processReactTemplateInternal(element: React.ReactNode, viewPath: Path): {
     templateRoots: FormTemplate[];
     reactRoot: React.ReactNode;
 } {
@@ -63,49 +63,69 @@ function processReactTemplateInternal(element: React.ReactNode, nodePath: Path):
         const elementType: any = element.type;
         const configuration: ReactTemplateConfiguration | undefined = elementType.formConfiguration;
         const {children, ...props} = element.props || {};
-        if (configuration != null && configuration.kind === "static") {
-            // todo (sivukhin, 24.01.2021): Fix this?
-            const nodeKey = nanoid(6);
-            const currentNodePath = [...nodePath, nodeKey];
-            const processed = (React.Children.toArray(children) || []).map(child => processReactTemplateInternal(child, currentNodePath));
+        if (configuration != null && configuration.kind === "view") {
+            // todo (sivukhin, 24.01.2021): why we need nanoid?
+            const viewKey = nanoid(6);
+            const currentViewPath = [...viewPath, viewKey];
+            const processed = (React.Children.toArray(children) || []).map(child => processReactTemplateInternal(child, currentViewPath));
             return {
                 templateRoots: [
                     {
-                        kind: "static",
-                        key: nodeKey,
+                        kind: "view",
+                        viewKey: viewKey,
                         tags: createTags(element, configuration),
                         children: processed.map(x => x.templateRoots).flat()
                     }
                 ],
                 reactRoot: React.createElement(Connect, {
-                    nodePath: currentNodePath,
-                    kind: "static",
+                    viewPath: currentViewPath,
+                    kind: "view",
                     template: element,
-                    key: nodeKey,
+                    key: viewKey,
                 }, processed.map(x => x.reactRoot))
             }
-        } else if (configuration != null && configuration.kind === "array") {
+        } else if (configuration != null && configuration.kind === "data-array") {
             const nodeKey = nanoid(6);
-            const currentNodePath = [...nodePath, nodeKey];
+            const currentViewPath = [...viewPath, nodeKey];
             const processed = (React.Children.toArray(children) || []).map(child => processReactTemplateInternal(child, []));
             return {
                 templateRoots: [
                     {
-                        kind: "array",
-                        key: nodeKey,
+                        kind: "data-array",
+                        viewKey: nodeKey,
+                        dataPath: element.props.path,
                         tags: createTags(element, configuration),
                         templates: processed.map(x => x.templateRoots).flat()
                     }
                 ],
                 reactRoot: React.createElement(Connect, {
-                    nodePath: currentNodePath,
-                    kind: "array",
+                    viewPath: currentViewPath,
+                    kind: "data-array",
                     template: element,
                     key: nodeKey,
                 }, React.createElement(React.Fragment, null, processed.map(x => x.reactRoot)))
             };
+        } else if (configuration != null && configuration.kind === "data-leaf") {
+            const nodeKey = nanoid(6);
+            const currentViewPath = [...viewPath, nodeKey];
+            return {
+                templateRoots: [
+                    {
+                        kind: "data-leaf",
+                        viewKey: nodeKey,
+                        dataPath: element.props.path,
+                        tags: createTags(element, configuration),
+                    }
+                ],
+                reactRoot: React.createElement(Connect, {
+                    viewPath: currentViewPath,
+                    kind: "data-array",
+                    template: element,
+                    key: nodeKey,
+                }, React.createElement(React.Fragment, null, children))
+            };
         }
-        const processed = (React.Children.toArray(children) || []).map(child => processReactTemplateInternal(child, nodePath));
+        const processed = (React.Children.toArray(children) || []).map(child => processReactTemplateInternal(child, viewPath));
         return {
             templateRoots: processed.map(x => x.templateRoots).flat(),
             reactRoot: React.cloneElement(element, {}, processed.map(x => x.reactRoot))

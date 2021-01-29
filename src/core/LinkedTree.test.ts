@@ -1,11 +1,11 @@
 import { createTree } from "./Tree";
-import { createLinkedTree } from "./LinkedTree";
+import { linkTrees } from "./LinkedTrees";
 
 test("singleConnection", () => {
     const a = createTree();
     const b = createTree();
 
-    const linkedTree = createLinkedTree({a: a, b: b});
+    const linkedTree = linkTrees({a: a, b: b});
     linkedTree.connect({a: [["a", "1"]], b: [["b", "1"]]});
     expect(linkedTree.connections({a: [["a", "1"]]})).toEqual({
         a: [],
@@ -18,7 +18,7 @@ test("manyConnections", () => {
     const b = createTree();
     const c = createTree();
 
-    const linkedTree = createLinkedTree({a: a, b: b, c: c});
+    const linkedTree = linkTrees({a: a, b: b, c: c});
     linkedTree.connect({a: [["a", "1"]], c: [["c", "1"], ["c", "2"]]});
     linkedTree.connect({b: [["b", "1"]], c: [["c", "2"], ["c", "3"]]});
     expect(linkedTree.connections({a: [["a", "1"]], b: [["b", "1"]]})).toEqual({
@@ -48,7 +48,7 @@ test("noConnections", () => {
     const b = createTree();
     const c = createTree();
 
-    const linkedTree = createLinkedTree({a: a, b: b, c: c});
+    const linkedTree = linkTrees({a: a, b: b, c: c});
     expect(linkedTree.connections({a: [["a", "1"]]})).toEqual({
         a: [],
         b: [],

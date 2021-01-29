@@ -8,7 +8,7 @@ type LinkedTreesPath<TLinkedTrees> = {
     [P in keyof TLinkedTrees]: Path[];
 }
 
-type LinkedTree<TLinkedTrees extends LinkedTreesArgs> = {
+export type LinkedTrees<TLinkedTrees extends LinkedTreesArgs> = {
     [P in keyof TLinkedTrees]: Tree;
 } & {
     connect(nodes: Partial<LinkedTreesPath<TLinkedTrees>>): void;
@@ -32,7 +32,7 @@ function intersect<T>(a: Set<T>, b: Set<T>): Set<T> {
     return result;
 }
 
-export function createLinkedTree<TLinkedTrees extends LinkedTreesArgs>(trees: TLinkedTrees): LinkedTree<TLinkedTrees> {
+export function linkTrees<TLinkedTrees extends LinkedTreesArgs>(trees: TLinkedTrees): LinkedTrees<TLinkedTrees> {
     const connections: Map<string, Set<string>> = new Map();
     return {
         ...trees,
@@ -71,7 +71,7 @@ export function createLinkedTree<TLinkedTrees extends LinkedTreesArgs>(trees: TL
             const result: LinkedTreesPath<TLinkedTrees> = Object.fromEntries(Object.keys(trees).map(x => [x, []]));
             intersection.forEach(x => {
                 const [treeName, pathString] = x.split(":");
-                const path = pathString.split(".");
+                const path = pathString === '' ? [] : pathString.split(".");
                 if (!result.hasOwnProperty(treeName)) {
                     // @ts-ignore
                     result[treeName] = [];

@@ -79,7 +79,7 @@ test("subscribeDataUpdate", () => {
     dataTree.updateNode(["root", "2"], payload());
     const subscriptionCalls: any[] = [];
     dataTree.subscribe(["root", "1"], {
-        update: (node) => subscriptionCalls.push(node.data.value),
+        notify: (node) => subscriptionCalls.push(node.data.value),
         dependencies: [{kind: "data", value: "value"}]
     });
     dataTree.updateNode(["root", "2"], payload());
@@ -95,7 +95,7 @@ test("subscribeChildrenUpdate", () => {
     dataTree.updateNode(["root", "a", "0"]);
     const subscriptionCalls: any[] = [];
     dataTree.subscribe(["root", "a"], {
-        update: (node) => subscriptionCalls.push(dataTree.children(["root", "a"])),
+        notify: (node) => subscriptionCalls.push(dataTree.children(["root", "a"])),
         dependencies: [{kind: "structure", value: "children"}]
     });
     dataTree.updateNode(["root", "a", "0"], {data: {value: "first"}});
@@ -122,7 +122,7 @@ test("unsubscribe", () => {
     dataTree.updateNode(["root", "2"]);
     const subscriptionCalls: any[] = [];
     const unsubscribe = dataTree.subscribe(["root", "1"], {
-        update: (node) => subscriptionCalls.push(node.data.value),
+        notify: (node) => subscriptionCalls.push(node.data.value),
         dependencies: [{kind: "data", value: "value"}]
     });
     dataTree.updateNode(["root", "1"], {data: {value: 1}});

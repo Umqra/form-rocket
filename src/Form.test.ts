@@ -1,157 +1,172 @@
 import { createForm } from "./Form";
 import { createTree } from "./core/Tree";
+import {linkTrees} from "./core/LinkedTrees";
 
 test("simpleForm", () => {
-    const dataTree = createTree();
-    const form = createForm(dataTree, {
-        kind: "static",
-        key: "",
+    const trees = linkTrees({
+        data: createTree(),
+        view: createTree()
+    })
+    const form = createForm(trees, {
+        kind: "view",
+        viewKey: "",
         children: [
             {
-                kind: "static",
-                key: "title",
-                tags: {path: ["title"]},
-                children: []
+                kind: "data-leaf",
+                viewKey: "title",
+                dataPath: ["title"]
             },
             {
-                kind: "static",
-                key: "user",
+                kind: "view",
+                viewKey: "user",
                 children: [
                     {
-                        kind: "static",
-                        key: "name",
-                        tags: {path: ["user", "name"]},
-                        children: []
+                        kind: "data-leaf",
+                        viewKey: "name",
+                        dataPath: ["user", "name"],
                     },
                     {
-                        kind: "static",
-                        key: "address",
-                        tags: {path: ["user", "address"]},
-                        children: []
+                        kind: "data-leaf",
+                        viewKey: "address",
+                        dataPath: ["user", "address"],
                     }
                 ]
             }
         ]
     });
     const dataTreeSubscriptions: any[] = [];
-    expect(dataTree.tryGetNode(["title"])).not.toBeNull();
-    dataTree.subscribe(["title"], {
-        update: (node) => dataTreeSubscriptions.push(node.data.value),
+    expect(trees.data.tryGetNode(["title"])).not.toBeNull();
+    trees.data.subscribe(["title"], {
+        notify: (node) => dataTreeSubscriptions.push(node.data.value),
         dependencies: [{kind: "data", value: "value"}]
     });
-    form.update([], {title: "User info", user: {name: "User-1", address: "Russia"}});
-    expect(dataTreeSubscriptions).toEqual([
-        "User info"
+    let lastFormSubscription: any = null;
+    const {update, unsubscribe} = form.attach({
+        notify: (update, changes) => lastFormSubscription = [update, changes]
+    });
+    update([], {title: "User info", user: {name: "User-1", address: "Russia"}});
+    expect(lastFormSubscription).toBeNull();
+    trees.data.updateNode(["user", "name"], {data: {value: "User-2"}});
+    expect(lastFormSubscription).toEqual([
+        {title: "User info", user: {name: "User-2", address: "Russia"}},
+        [["user", "name"]]
     ]);
-    const formSubscriptions: any[] = [];
-    form.subscribe({update: (path, value) => formSubscriptions.push([path, value])});
-    dataTree.updateNode(["user", "name"], {data: {value: "User-2"}});
-    dataTree.updateNode(["title"], {data: {value: "User card"}});
-    expect(formSubscriptions).toEqual([
-        [["user", "name"], "User-2"],
-        [["title"], "User card"],
+    trees.data.updateNode(["title"], {data: {value: "User card"}});
+    expect(lastFormSubscription).toEqual([
+        {title: "User card", user: {name: "User-2", address: "Russia"}},
+        [["title"]]
     ]);
 });
 
 test("arrayForm", () => {
-    const dataTree = createTree();
-    const form = createForm(dataTree, {
-        kind: "static",
-        key: "",
+    const trees = linkTrees({
+        data: createTree(),
+        view: createTree()
+    });
+    const form = createForm(trees, {
+        kind: "view",
+        viewKey: "",
         children: [
             {
-                kind: "static",
-                key: "title",
-                tags: {path: ["title"]},
-                children: []
+                kind: "data-leaf",
+                viewKey: "title",
+                dataPath: ["title"],
             },
             {
-                kind: "array",
-                key: "users",
-                tags: {path: ["users"]},
-                templates: {
-                    kind: "static",
-                    key: "user",
-                    children: [
-                        {
-                            kind: "static",
-                            key: "name",
-                            tags: {path: ["name"]},
-                            children: []
-                        },
-                        {
-                            kind: "static",
-                            key: "address",
-                            tags: {path: ["address"]},
-                            children: []
-                        }
-                    ]
-                }
+                kind: "data-array",
+                viewKey: "users",
+                dataPath: ["users"],
+                templates: [
+                    {
+                        kind: "view",
+                        viewKey: "user",
+                        children: [
+                            {
+                                kind: "data-leaf",
+                                viewKey: "name",
+                                dataPath: ["name"],
+                            },
+                            {
+                                kind: "data-leaf",
+                                viewKey: "address",
+                                dataPath: ["address"],
+                            }
+                        ]
+                    }
+                ]
             }
         ]
     });
-    const subscriptionCalls: any[] = [];
-    form.update([], {title: "User list", users: [{name: "User-1", address: "Russia"}, {name: "User-2", address: "USA"}]});
-    form.subscribe({update: (path, value) => subscriptionCalls.push([path, value])});
-    dataTree.updateNode(["title"], {data: {value: "List"}});
-    dataTree.updateNode(["users", "0", "user", "name"], {data: {value: "User-1-updated"}});
-    expect(subscriptionCalls).toEqual([
-        [["title"], "List"],
-        [["users", "0", "name"], "User-1-updated"],
+    let lastSubscriptionCall: any = null;
+    const {update} = form.attach({
+        notify: (update, changes) => lastSubscriptionCall = [update, changes]
+    });
+    update([], {title: "User list", users: [{name: "User-1", address: "Russia"}, {name: "User-2", address: "USA"}]});
+    trees.data.updateNode(["title"], {data: {value: "List"}});
+    expect(lastSubscriptionCall).toEqual([
+        {title: "List", users: [{name: "User-1", address: "Russia"}, {name: "User-2", address: "USA"}]},
+        [["title"]]
+    ]);
+    trees.data.updateNode(["users", "0", "name"], {data: {value: "User-1-updated"}});
+    expect(lastSubscriptionCall).toEqual([
+        {title: "List", users: [{name: "User-1-updated", address: "Russia"}, {name: "User-2", address: "USA"}]},
+        [["users", "0", "name"]]
     ]);
 });
 
 test("partialUpdate", () => {
-    const dataTree = createTree();
-    const form = createForm(dataTree, {
-        kind: "static",
-        key: "",
+    const trees = linkTrees({
+        data: createTree(),
+        view: createTree()
+    });
+    const form = createForm(trees, {
+        kind: "view",
+        viewKey: "",
         children: [
             {
-                kind: "static",
-                key: "title",
-                tags: {path: ["title"]},
-                children: []
+                kind: "data-leaf",
+                viewKey: "title",
+                dataPath: ["title"],
             },
             {
-                kind: "static",
-                key: "user",
+                kind: "view",
+                viewKey: "user",
                 children: [
                     {
-                        kind: "static",
-                        key: "name",
-                        tags: {path: ["user", "name"]},
-                        children: []
+                        kind: "data-leaf",
+                        viewKey: "name",
+                        dataPath: ["user", "name"],
                     },
                     {
-                        kind: "static",
-                        key: "address",
-                        tags: {path: ["user", "address"]},
-                        children: []
+                        kind: "data-leaf",
+                        viewKey: "address",
+                        dataPath: ["user", "address"],
                     }
                 ]
             }
         ]
     });
     const dataTreeSubscriptions: any[] = [];
-    form.update([], {title: "User info", user: {name: "User-1", address: "Russia"}});
-    dataTree.subscribe(["title"], {
-        update: (node) => dataTreeSubscriptions.push(node.data.value),
+    const {update} = form.attach();
+    update([], {title: "User info", user: {name: "User-1", address: "Russia"}});
+    trees.data.subscribe(["title"], {
+        notify: (node) => dataTreeSubscriptions.push(node.data.value),
         dependencies: [{kind: "data", value: "value"}]
     });
-    dataTree.subscribe(["user", "name"], {
-        update: (node) => dataTreeSubscriptions.push(node.data.value),
+    trees.data.subscribe(["user", "name"], {
+        notify: (node) => dataTreeSubscriptions.push(node.data.value),
         dependencies: [{kind: "data", value: "value"}]
     });
-    dataTree.subscribe(["user", "address"], {
-        update: (node) => dataTreeSubscriptions.push(node.data.value),
+    trees.data.subscribe(["user", "address"], {
+        notify: (node) => dataTreeSubscriptions.push(node.data.value),
         dependencies: [{kind: "data", value: "value"}]
     });
-    form.update(["user"], {title: "User card", user: {name: "User-2", address: "USA"}});
+    update(["user", "name"], "User-2");
+    update(["user", "address"], "USA");
     expect(dataTreeSubscriptions).toEqual([
         "User-2", "USA"
     ]);
-    form.update([], {title: "User card", user: {name: "User-2", address: "USA"}});
+    update([], {title: "User card", user: {name: "User-2", address: "USA"}});
     expect(dataTreeSubscriptions).toEqual([
         "User-2", "USA",
         "User card", "User-2", "USA"
@@ -159,34 +174,39 @@ test("partialUpdate", () => {
 });
 
 test("arrayNode value", () => {
-    const dataTree = createTree();
-    const form = createForm(dataTree, {
-        kind: "static",
-        key: "",
+    const trees = linkTrees({
+        data: createTree(),
+        view: createTree()
+    })
+    const form = createForm(trees, {
+        kind: "view",
+        viewKey: "",
         children: [
             {
-                kind: "array",
-                key: "users",
-                tags: {path: ["users"]},
-                templates: {
-                    kind: "static",
-                    key: "user",
-                    children: [
-                        {
-                            kind: "static",
-                            key: "name",
-                            tags: {path: ["user", "name"]},
-                            children: []
-                        }
-                    ]
-                }
+                kind: "data-array",
+                viewKey: "users",
+                dataPath: ["users"],
+                templates: [
+                    {
+                        kind: "view",
+                        viewKey: "user",
+                        children: [
+                            {
+                                kind: "data-leaf",
+                                viewKey: "name",
+                                dataPath: ["user", "name"],
+                            }
+                        ]
+                    }
+                ]
             }
         ]
     });
-    form.update([], {users: [{name:"A"}, {name: "B"}, {name: "C"}]});
-    expect(dataTree.tryGetNode(["users"]).data.value).toEqual(["0", "1", "2"]);
-    form.update([], {users: [{name:"A"}, {name: "C"}]});
-    expect(dataTree.tryGetNode(["users"]).data.value).toEqual(["0", "1"]);
-    form.update([], {users: [{name:"A"}, {name: "C"}, {name: "D"}, {name: "E"}]});
-    expect(dataTree.tryGetNode(["users"]).data.value).toEqual(["0", "1", "2", "3"]);
+    const {update} = form.attach();
+    update([], {users: [{name:"A"}, {name: "B"}, {name: "C"}]});
+    expect(trees.data.tryGetNode(["users"]).data.value).toEqual(["0", "1", "2"]);
+    update([], {users: [{name:"A"}, {name: "C"}]});
+    expect(trees.data.tryGetNode(["users"]).data.value).toEqual(["0", "1"]);
+    update([], {users: [{name:"A"}, {name: "C"}, {name: "D"}, {name: "E"}]});
+    expect(trees.data.tryGetNode(["users"]).data.value).toEqual(["0", "1", "2", "3"]);
 });

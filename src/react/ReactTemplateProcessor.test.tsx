@@ -1,26 +1,26 @@
 import * as React from "react";
 import {configureComponent, processReactTemplate} from "./ReactTemplateProcessor";
 
-const PropComponent = configureComponent(function(props: React.PropsWithChildren<{path: string[]}>) {
+const PropComponent = configureComponent(function(props: React.PropsWithChildren<{color: string}>) {
     return <div>{props.children}</div>
-}, {kind: "static", tags: {"path": {kind: "fromProp", propName: "path"}}});
+}, {kind: "view", tags: {color: {kind: "fromProp", propName: "color"}}});
 
 const ValueComponent = configureComponent(function(props: React.PropsWithChildren<any>) {
     return <div>{props.children}</div>
-}, {kind: "static", tags: {"type": {kind: "fromValue", value: "huge"}}});
+}, {kind: "data-leaf", tags: {type: {kind: "fromValue", value: "huge"}}});
 
 const ArrayComponent = configureComponent(function(props: React.PropsWithChildren<any>){
     return <div>{props.children}</div>;
-}, {kind: "array"});
+}, {kind: "data-array"});
 
 test("simple templates", () => {
     const {templateRoot: template} = processReactTemplate(<div>
-        <PropComponent path={["root", "component"]}>
+        <PropComponent color="yellow">
             <div>
-                <ValueComponent/>
+                <ValueComponent path={["root", "component"]}/>
                 <div>
-                    <ArrayComponent>
-                        <ValueComponent/>
+                    <ArrayComponent path={["items"]}>
+                        <ValueComponent path={["value"]}/>
                     </ArrayComponent>
                 </div>
             </div>
@@ -28,35 +28,38 @@ test("simple templates", () => {
         </PropComponent>
     </div>);
     expect(template).toEqual({
-        kind: "static",
-        key: "",
+        kind: "view",
+        viewKey: "",
         children: [{
-            kind: "static",
-            key: expect.any(String),
+            kind: "view",
+            viewKey: expect.any(String),
             tags: {
-                path: ["root", "component"]
+                color: "yellow"
             },
             children: [
                 {
-                    kind: "static",
-                    key: expect.any(String),
+                    kind: "data-leaf",
+                    viewKey: expect.any(String),
+                    dataPath: ["root", "component"],
                     tags: {
                         type: "huge"
-                    },
-                    children: []
+                    }
                 },
                 {
-                    kind: "array",
-                    key: expect.any(String),
+                    kind: "data-array",
+                    viewKey: expect.any(String),
+                    dataPath: ["items"],
                     tags: {},
-                    template: {
-                        kind: "static",
-                        key: expect.any(String),
-                        tags: {
-                            type: "huge"
-                        },
-                        children: []
-                    }
+                    templates: [
+                        {
+                            kind: "data-leaf",
+                            viewKey: expect.any(String),
+                            dataPath: ["value"],
+                            tags: {
+                                type: "huge"
+                            },
+                        }
+                    ]
                 },
             ]
         }]

@@ -1,7 +1,7 @@
 export type Path = string[];
 
 export interface TreeNode {
-    tags: { [key: string]: any };
+    tags: { [key: string]: string };
     data: { [key: string]: any };
 }
 
@@ -10,7 +10,7 @@ type TreeNodeOptional = Partial<TreeNode>;
 type SubscriptionDependency = {kind: "data", value: string} | {kind: "tag", value: string} | {kind: "structure", value: "children"}
 
 interface TreeSubscription {
-    update: (data: TreeNode) => void;
+    notify: (data: TreeNode) => void;
     dependencies: SubscriptionDependency[];
 }
 
@@ -95,7 +95,7 @@ function triggerSubscriptions(node: InternalTreeNode, changes: SubscriptionDepen
             }
         }
         if (shouldBeTriggered) {
-            subscription.update(node.node);
+            subscription.notify(node.node);
         }
     }
 }

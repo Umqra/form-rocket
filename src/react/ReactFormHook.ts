@@ -14,7 +14,7 @@ export function useFormData(relativePath: Path): [Data, (update: Data) => void] 
     const [data, setData] = React.useState<Data>(() => dataTree.tryGetNode(nodePath)?.data);
     React.useEffect(() => {
         return dataTree.subscribe(nodePath, {
-            update: (update) => setData(update.data.value),
+            notify: (update) => setData(update.data.value),
             dependencies: [
                 {kind: "data", value: "value"},
                 {kind: "data", value: "accessibility"},

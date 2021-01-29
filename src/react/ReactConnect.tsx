@@ -5,7 +5,7 @@ import {ReactPathContext} from "./ReactPathContext";
 import {configureComponent, ReactTemplateConfiguration} from "./ReactTemplateProcessor";
 
 interface ConnectProps {
-    nodePath: string[];
+    viewPath: string[];
     kind: FormTemplateKind;
     template: React.ReactElement;
 }
@@ -23,9 +23,9 @@ export function templatify<TComponent>(component: TComponent, configuration: Rea
 }
 
 function ConnectArray(props: Omit<ConnectProps, "kind"> & {children: React.ReactElement}) {
-    const [data, ] = useFormData(props.nodePath);
+    const [data, ] = useFormData(props.viewPath);
     const childrenIds = data.value;
-    const wrapped = childrenIds.map((x: string) => <ReactPathContext.Provider value={[...props.nodePath, x]}>{props.children}</ReactPathContext.Provider>);
+    const wrapped = childrenIds.map((x: string) => <ReactPathContext.Provider value={[...props.viewPath, x]}>{props.children}</ReactPathContext.Provider>);
     return React.cloneElement(props.template, {
         accessibility: data.accessibility,
         validation: data.validation,
@@ -33,7 +33,7 @@ function ConnectArray(props: Omit<ConnectProps, "kind"> & {children: React.React
 }
 
 function ConnectStatic(props: Omit<ConnectProps, "kind"> & {children: React.ReactNode}) {
-    const [data, setData] = useFormData(props.nodePath);
+    const [data, setData] = useFormData(props.viewPath);
     return React.cloneElement(props.template, {
         value: data.value,
         onChange: (x: any) => setData({value: x}),
