@@ -1,7 +1,7 @@
 import {Path} from "./core/Tree";
 
 type Tags = {
-    [key: string]: string;
+    [key: string]: string[];
 }
 
 export type FormTemplate = {

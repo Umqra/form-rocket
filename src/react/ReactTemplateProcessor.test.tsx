@@ -7,11 +7,11 @@ const PropComponent = configureComponent(function(props: React.PropsWithChildren
 
 const ValueComponent = configureComponent(function(props: React.PropsWithChildren<any>) {
     return <div>{props.children}</div>
-}, {kind: "data-leaf", tags: {type: {kind: "fromValue", value: "huge"}}});
+}, {kind: "data-leaf", tags: {type: {kind: "fromValue", value: "huge"}, caption: {kind: "fromProp", propName: "caption"}}});
 
 const ArrayComponent = configureComponent(function(props: React.PropsWithChildren<any>){
     return <div>{props.children}</div>;
-}, {kind: "data-array"});
+}, {kind: "data-array", tags: {caption: {kind: "fromProp", propName: "caption"}}});
 
 test("simple templates", () => {
     const {templateRoot: template} = processReactTemplate(<div>
@@ -19,8 +19,8 @@ test("simple templates", () => {
             <div>
                 <ValueComponent path={["root", "component"]}/>
                 <div>
-                    <ArrayComponent path={["items"]}>
-                        <ValueComponent path={["value"]}/>
+                    <ArrayComponent path={["items"]} caption="Items">
+                        <ValueComponent path={["value"]} caption="Item"/>
                     </ArrayComponent>
                 </div>
             </div>
@@ -34,7 +34,7 @@ test("simple templates", () => {
             kind: "view",
             viewKey: expect.any(String),
             tags: {
-                color: "yellow"
+                color: ["yellow"]
             },
             children: [
                 {
@@ -42,21 +42,24 @@ test("simple templates", () => {
                     viewKey: expect.any(String),
                     dataPath: ["root", "component"],
                     tags: {
-                        type: "huge"
+                        type: ["huge"]
                     }
                 },
                 {
                     kind: "data-array",
                     viewKey: expect.any(String),
                     dataPath: ["items"],
-                    tags: {},
+                    tags: {
+                        caption: ["items"]
+                    },
                     templates: [
                         {
                             kind: "data-leaf",
                             viewKey: expect.any(String),
                             dataPath: ["value"],
                             tags: {
-                                type: "huge"
+                                type: ["huge"],
+                                caption: ["items", "item("]
                             },
                         }
                     ]

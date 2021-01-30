@@ -12,8 +12,8 @@ test("updateNode", () => {
 
 test("updateNodeWithData", () => {
     const dataTree = createTree();
-    const leafData = {data: {value: "first", validation: "valid"}, tags: {type: "simple", subtype: "extra-simple"}}
-    const internalData = {data: {context: "user-id"}, tags: {name: "Field-Name"}};
+    const leafData = {data: {value: "first", validation: "valid"}, tags: {type: ["simple"], subtype: ["extra-simple"]}}
+    const internalData = {data: {context: "user-id"}, tags: {name: ["Field-Name"]}};
     dataTree.updateNode(["root", "a", "0"], leafData);
     expect(dataTree.tryGetNode(["root"])).toEqual({data: {}, tags: {}});
     expect(dataTree.tryGetNode(["root", "a"])).toEqual({data: {}, tags: {}});
@@ -29,9 +29,9 @@ test("updateNodeWithData", () => {
             context: "user-id"
         },
         tags: {
-            type: "simple",
-            subtype: "extra-simple",
-            name: "Field-Name"
+            type: ["simple"],
+            subtype: ["extra-simple"],
+            name: ["Field-Name"]
         }
     });
 });
@@ -134,20 +134,20 @@ test("unsubscribe", () => {
 
 test("tag search", () => {
     const dataTree = createTree();
-    dataTree.updateNode(["root", "1"], {tags: {type: "huge", visible: "yes"}});
-    dataTree.updateNode(["root", "2"], {tags: {type: "small", visible: "no"}});
-    dataTree.updateNode(["root", "3"], {tags: {type: "small", visible: "yes"}});
-    dataTree.updateNode(["root", "4"], {tags: {type: "huge", visible: "yes"}});
-    expect(dataTree.search({type: "huge"})).toEqual([
+    dataTree.updateNode(["root", "1"], {tags: {type: ["huge"], visible: ["yes"]}});
+    dataTree.updateNode(["root", "2"], {tags: {type: ["small"], visible: ["no"]}});
+    dataTree.updateNode(["root", "3"], {tags: {type: ["small"], visible: ["yes"]}});
+    dataTree.updateNode(["root", "4"], {tags: {type: ["huge"], visible: ["yes"]}});
+    expect(dataTree.search({type: ["huge"]})).toEqual([
         ["root", "1"],
         ["root", "4"]
     ]);
-    expect(dataTree.search({type: "small", visible: "no"})).toEqual([
+    expect(dataTree.search({type: ["small"], visible: ["no"]})).toEqual([
         ["root", "2"]
     ]);
-    expect(dataTree.search({type: "huge", visible: "no"})).toEqual([]);
+    expect(dataTree.search({type: ["huge"], visible: ["no"]})).toEqual([]);
     dataTree.removeNode(["root", "1"]);
-    expect(dataTree.search({type: "huge"})).toEqual([
+    expect(dataTree.search({type: ["huge"]})).toEqual([
         ["root", "4"]
     ]);
 });

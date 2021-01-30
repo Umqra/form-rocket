@@ -1,9 +1,9 @@
 import {intersect} from "./SetUtils";
-import {pathToString} from "./PathUtils";
+import {pathFromString, pathToString} from "./PathUtils";
 
 export type Path = string[];
 
-type Tags = {[key: string]: string};
+type Tags = {[key: string]: string[]};
 type Data = {[key: string]: any};
 
 export interface TreeNode {
@@ -25,7 +25,7 @@ export interface Tree {
     subscribe(nodePath: Path, subscription: TreeSubscription): () => void;
     children(nodePath: Path): Path[];
     search(tags: Tags): Path[];
-    tags(tagKey: string): string[];
+    tags(tagKey: string): string[][];
 }
 
 interface InternalTreeNode {
@@ -115,9 +115,10 @@ export function createTree(): Tree {
         const pathString = pathToString(path);
         for (const [tagKey, tagValue] of Object.entries(tags)) {
             if (tagsIndex.has(tagKey)) {
+                const joinedTagValue = tagValue.join(".");
                 const tagsWithKey = tagsIndex.get(tagKey);
-                if (tagsWithKey.has(tagValue)) {
-                    tagsWithKey.get(tagValue).delete(pathString);
+                if (tagsWithKey.has(joinedTagValue)) {
+                    tagsWithKey.get(joinedTagValue).delete(pathString);
                 }
             }
         }
@@ -130,22 +131,24 @@ export function createTree(): Tree {
                 tagsIndex.set(tagKey, new Map<string, Set<string>>());
             }
             const tagsWithKey = tagsIndex.get(tagKey);
-            if (!tagsWithKey.has(tagValue)) {
-                tagsWithKey.set(tagValue, new Set<string>());
+            const joinedTagValue = tagValue.join(".");
+            if (!tagsWithKey.has(joinedTagValue)) {
+                tagsWithKey.set(joinedTagValue, new Set<string>());
             }
-            tagsWithKey.get(tagValue).add(pathString);
+            tagsWithKey.get(joinedTagValue).add(pathString);
         }
     }
 
-    function getNodesWithTag(tagKey: string, tagValue: string): Set<string> {
+    function getNodesWithTag(tagKey: string, tagValue: string[]): Set<string> {
         if (!tagsIndex.has(tagKey)) {
             return new Set<string>();
         }
         const tagsWithKey = tagsIndex.get(tagKey);
-        if (!tagsWithKey.has(tagValue)) {
+        const joinedTagValue = tagValue.join(".");
+        if (!tagsWithKey.has(joinedTagValue)) {
             return new Set<string>();
         }
-        return tagsWithKey.get(tagValue);
+        return tagsWithKey.get(joinedTagValue);
     }
 
     return {
@@ -235,11 +238,11 @@ export function createTree(): Tree {
             })
             return nodesPath;
         },
-        tags(tagKey: string): string[] {
+        tags(tagKey: string): string[][] {
             if (!tagsIndex.has(tagKey)) {
                 return [];
             }
-            return Array.from(tagsIndex.get(tagKey).keys());
+            return Array.from(tagsIndex.get(tagKey).keys()).map(x => pathFromString(x));
         }
     };
 }

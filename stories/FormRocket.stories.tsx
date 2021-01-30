@@ -27,6 +27,7 @@ export const Default = () => {
       {name: "Колбаска", gtin: "GTIN-2"}
     ]
   });
+  console.info(trees.view.tags("caption"));
   return (
     <ReactFormContext.Provider value={trees}>
       {reactRoot}
