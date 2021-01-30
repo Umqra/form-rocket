@@ -1,4 +1,6 @@
 import {Tree, Path} from "./Tree";
+import {intersect} from "./SetUtils";
+import {pathFromString, pathToString} from "./PathUtils";
 
 type LinkedTreesArgs = {
     [key: string]: Tree;
@@ -16,20 +18,7 @@ export type LinkedTrees<TLinkedTrees extends LinkedTreesArgs> = {
 }
 
 function getKey(treeName: string, path: Path) {
-    return treeName + ":" + path.join(".");
-}
-
-function intersect<T>(a: Set<T>, b: Set<T>): Set<T> {
-    if (a.size > b.size) {
-        return intersect(b, a);
-    }
-    const result = new Set<T>();
-    a.forEach(x => {
-        if (b.has(x)) {
-            result.add(x);
-        }
-    });
-    return result;
+    return treeName + ":" + pathToString(path);
 }
 
 export function linkTrees<TLinkedTrees extends LinkedTreesArgs>(trees: TLinkedTrees): LinkedTrees<TLinkedTrees> {
@@ -71,7 +60,7 @@ export function linkTrees<TLinkedTrees extends LinkedTreesArgs>(trees: TLinkedTr
             const result: LinkedTreesPath<TLinkedTrees> = Object.fromEntries(Object.keys(trees).map(x => [x, []]));
             intersection.forEach(x => {
                 const [treeName, pathString] = x.split(":");
-                const path = pathString === '' ? [] : pathString.split(".");
+                const path = pathFromString(pathString);
                 if (!result.hasOwnProperty(treeName)) {
                     // @ts-ignore
                     result[treeName] = [];

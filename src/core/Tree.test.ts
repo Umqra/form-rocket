@@ -131,3 +131,23 @@ test("unsubscribe", () => {
     dataTree.updateNode(["root", "1"], {data: {value: 2}});
     expect(subscriptionCalls).toEqual([1]);
 });
+
+test("tag search", () => {
+    const dataTree = createTree();
+    dataTree.updateNode(["root", "1"], {tags: {type: "huge", visible: "yes"}});
+    dataTree.updateNode(["root", "2"], {tags: {type: "small", visible: "no"}});
+    dataTree.updateNode(["root", "3"], {tags: {type: "small", visible: "yes"}});
+    dataTree.updateNode(["root", "4"], {tags: {type: "huge", visible: "yes"}});
+    expect(dataTree.search({type: "huge"})).toEqual([
+        ["root", "1"],
+        ["root", "4"]
+    ]);
+    expect(dataTree.search({type: "small", visible: "no"})).toEqual([
+        ["root", "2"]
+    ]);
+    expect(dataTree.search({type: "huge", visible: "no"})).toEqual([]);
+    dataTree.removeNode(["root", "1"]);
+    expect(dataTree.search({type: "huge"})).toEqual([
+        ["root", "4"]
+    ]);
+});

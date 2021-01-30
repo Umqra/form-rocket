@@ -1,11 +1,15 @@
+import {intersect} from "./SetUtils";
+import {pathToString} from "./PathUtils";
+
 export type Path = string[];
 
-export interface TreeNode {
-    tags: { [key: string]: string };
-    data: { [key: string]: any };
-}
+type Tags = {[key: string]: string};
+type Data = {[key: string]: any};
 
-type TreeNodeOptional = Partial<TreeNode>;
+export interface TreeNode {
+    tags: Tags;
+    data: Data;
+}
 
 type SubscriptionDependency = {kind: "data", value: string} | {kind: "tag", value: string} | {kind: "structure", value: "children"}
 
@@ -15,11 +19,13 @@ interface TreeSubscription {
 }
 
 export interface Tree {
-    updateNode(nodePath: Path, node?: TreeNodeOptional): void;
+    updateNode(nodePath: Path, node?: Partial<TreeNode>): void;
     removeNode(nodePath: Path): void;
     tryGetNode(nodePath: Path): TreeNode | null;
     subscribe(nodePath: Path, subscription: TreeSubscription): () => void;
     children(nodePath: Path): Path[];
+    search(tags: Tags): Path[];
+    tags(tagKey: string): string[];
 }
 
 interface InternalTreeNode {
@@ -49,7 +55,7 @@ function addNode(root: InternalTreeNode, nodePath: Path, l: number, r: number): 
     return addNode(root.children[id], nodePath, l + 1, r);
 }
 
-function getNode(root: InternalTreeNode, nodePath: Path, l: number, r: number): InternalTreeNode | null {
+function tryGetNode(root: InternalTreeNode, nodePath: Path, l: number, r: number): InternalTreeNode | null {
     if (l >= r) {
         return root;
     }
@@ -57,7 +63,7 @@ function getNode(root: InternalTreeNode, nodePath: Path, l: number, r: number): 
     if (!root.children.hasOwnProperty(id)) {
         return null;
     }
-    return getNode(root.children[id], nodePath, l + 1, r);
+    return tryGetNode(root.children[id], nodePath, l + 1, r);
 }
 
 function removeNode(root: InternalTreeNode, nodePath: Path, l: number, r: number) {
@@ -102,11 +108,53 @@ function triggerSubscriptions(node: InternalTreeNode, changes: SubscriptionDepen
 
 export function createTree(): Tree {
     const root = createEmptyNode();
+    const tagsIndex = new Map<string, Map<string, Set<string>>>();
     let subscriptionId = 0;
+
+    function removeNodeFromTags(path: Path, tags: Tags) {
+        const pathString = pathToString(path);
+        for (const [tagKey, tagValue] of Object.entries(tags)) {
+            if (tagsIndex.has(tagKey)) {
+                const tagsWithKey = tagsIndex.get(tagKey);
+                if (tagsWithKey.has(tagValue)) {
+                    tagsWithKey.get(tagValue).delete(pathString);
+                }
+            }
+        }
+    }
+
+    function addNodeToTags(path: Path, tags: Tags) {
+        const pathString = pathToString(path);
+        for (const [tagKey, tagValue] of Object.entries(tags)) {
+            if (!tagsIndex.has(tagKey)) {
+                tagsIndex.set(tagKey, new Map<string, Set<string>>());
+            }
+            const tagsWithKey = tagsIndex.get(tagKey);
+            if (!tagsWithKey.has(tagValue)) {
+                tagsWithKey.set(tagValue, new Set<string>());
+            }
+            tagsWithKey.get(tagValue).add(pathString);
+        }
+    }
+
+    function getNodesWithTag(tagKey: string, tagValue: string): Set<string> {
+        if (!tagsIndex.has(tagKey)) {
+            return new Set<string>();
+        }
+        const tagsWithKey = tagsIndex.get(tagKey);
+        if (!tagsWithKey.has(tagValue)) {
+            return new Set<string>();
+        }
+        return tagsWithKey.get(tagValue);
+    }
+
     return {
-        updateNode(nodePath: Path, node?: TreeNodeOptional) {
-            const previousNode = getNode(root, nodePath, 0, nodePath.length);
+        updateNode(nodePath: Path, node?: Partial<TreeNode>) {
+            const previousNode = tryGetNode(root, nodePath, 0, nodePath.length);
             const currentNode = addNode(root, nodePath, 0, nodePath.length);
+            if (previousNode != null) {
+                removeNodeFromTags(nodePath, previousNode.node.tags);
+            }
 
             const dependencies: SubscriptionDependency[] = [];
             if (node != null && node.data != null) {
@@ -118,42 +166,46 @@ export function createTree(): Tree {
                 dependencies.push(...Object.keys(node.tags).map(x => ({kind: "tag", value: x} as SubscriptionDependency)))
             }
 
+            addNodeToTags(nodePath, currentNode.node.tags);
+
             if (dependencies.length > 0) {
                 triggerSubscriptions(currentNode, dependencies);
             }
 
             if (previousNode == null) {
-                const parent = getNode(root, nodePath, 0, nodePath.length - 1);
+                const parent = tryGetNode(root, nodePath, 0, nodePath.length - 1);
                 if (parent != null) {
                     triggerSubscriptions(parent, [{kind: "structure", value: "children"}]);
                 }
             }
         },
         removeNode: (nodePath: Path) => {
+            const previousNode = tryGetNode(root, nodePath, 0, nodePath.length);
+            removeNodeFromTags(nodePath, previousNode.node.tags);
             removeNode(root, nodePath, 0, nodePath.length);
             if (nodePath.length > 0) {
-                const parent = getNode(root, nodePath, 0, nodePath.length - 1);
+                const parent = tryGetNode(root, nodePath, 0, nodePath.length - 1);
                 if (parent != null) {
                     triggerSubscriptions(parent, [{kind: "structure", value: "children"}]);
                 }
             }
         },
         tryGetNode: (nodePath: Path) => {
-            const treeNode = getNode(root, nodePath, 0, nodePath.length);
+            const treeNode = tryGetNode(root, nodePath, 0, nodePath.length);
             if (treeNode == null) {
                 return null;
             }
             return treeNode.node;
         },
         children: (nodePath: Path) => {
-            const treeNode = getNode(root, nodePath, 0, nodePath.length);
+            const treeNode = tryGetNode(root, nodePath, 0, nodePath.length);
             if (treeNode == null) {
                 return [];
             }
             return Object.keys(treeNode.children).map(x => [...nodePath, x]);
         },
         subscribe: (nodePath: Path, options: TreeSubscription) => {
-            const treeNode = getNode(root, nodePath, 0, nodePath.length);
+            const treeNode = tryGetNode(root, nodePath, 0, nodePath.length);
             if (treeNode == null) {
                 return () => {
                     /* empty unsubscribe function */
@@ -166,5 +218,28 @@ export function createTree(): Tree {
                 treeNode.subscriptions.splice(deletePositions, 1);
             };
         },
+        search(tags: Tags): Path[] {
+            let intersection: null | Set<string> = null;
+            for (const [tagKey, tagValue] of Object.entries(tags)) {
+                const current = getNodesWithTag(tagKey, tagValue);
+                if (intersection == null) {
+                    intersection = current;
+                } else {
+                    intersection = intersect(intersection, current);
+                }
+            }
+            const nodesPath: Path[] = [];
+            intersection.forEach(x => {
+                const path = x === '' ? [] : x.split(".");
+                nodesPath.push(path);
+            })
+            return nodesPath;
+        },
+        tags(tagKey: string): string[] {
+            if (!tagsIndex.has(tagKey)) {
+                return [];
+            }
+            return Array.from(tagsIndex.get(tagKey).keys());
+        }
     };
 }
