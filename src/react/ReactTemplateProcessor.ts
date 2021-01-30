@@ -87,20 +87,22 @@ function processReactTemplateInternal(element: React.ReactNode, viewPath: Path):
         } else if (configuration != null && configuration.kind === "data-array") {
             const nodeKey = nanoid(6);
             const currentViewPath = [...viewPath, nodeKey];
+            const dataPath = element.props.path;
             const processed = (React.Children.toArray(children) || []).map(child => processReactTemplateInternal(child, []));
             return {
                 templateRoots: [
                     {
                         kind: "data-array",
                         viewKey: nodeKey,
-                        dataPath: element.props.path,
+                        dataPath: dataPath,
                         tags: createTags(element, configuration),
                         templates: processed.map(x => x.templateRoots).flat()
                     }
                 ],
                 reactRoot: React.createElement(Connect, {
-                    viewPath: currentViewPath,
                     kind: "data-array",
+                    viewPath: currentViewPath,
+                    dataPath: dataPath,
                     template: element,
                     key: nodeKey,
                 }, React.createElement(React.Fragment, null, processed.map(x => x.reactRoot)))
@@ -108,18 +110,20 @@ function processReactTemplateInternal(element: React.ReactNode, viewPath: Path):
         } else if (configuration != null && configuration.kind === "data-leaf") {
             const nodeKey = nanoid(6);
             const currentViewPath = [...viewPath, nodeKey];
+            const dataPath = element.props.path;
             return {
                 templateRoots: [
                     {
                         kind: "data-leaf",
                         viewKey: nodeKey,
-                        dataPath: element.props.path,
+                        dataPath: dataPath,
                         tags: createTags(element, configuration),
                     }
                 ],
                 reactRoot: React.createElement(Connect, {
+                    kind: "data-leaf",
                     viewPath: currentViewPath,
-                    kind: "data-array",
+                    dataPath: dataPath,
                     template: element,
                     key: nodeKey,
                 }, React.createElement(React.Fragment, null, children))

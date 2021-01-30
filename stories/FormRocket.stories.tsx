@@ -1,19 +1,24 @@
 import * as React from "react";
-import { ReactFormContext } from "../src/React/ReactFormContext";
+import { ReactFormContext } from "../src/react/ReactFormContext";
 import {createTree} from "../src/core/Tree";
-import {processReactTemplate} from "../src/React/ReactTemplateProcessor";
+import {processReactTemplate} from "../src/react/ReactTemplateProcessor";
 import {MessageTemplate} from "../src/Message.form";
 import {createForm} from "../src/Form";
+import {linkTrees} from "../src/core/LinkedTrees";
 
 export default {
   title: "FormRocket"
 };
 
 export const Default = () => {
-  const dataTree = createTree();
+  const trees = linkTrees({
+    data: createTree(),
+    view: createTree()
+  });
   const {templateRoot: template, reactRoot: reactRoot} = processReactTemplate(MessageTemplate);
-  const form = createForm(dataTree, template);
-  form.update([], {
+  const form = createForm(trees, template);
+  const {update} = form.attach();
+  update([], {
     orderNumber: "Заказ №1423",
     supplier: {name: "Хлебушек", gln: "2222222222"},
     buyer: {name: "Пятерочка", gln: "8888888888"},
@@ -23,7 +28,7 @@ export const Default = () => {
     ]
   });
   return (
-    <ReactFormContext.Provider value={dataTree}>
+    <ReactFormContext.Provider value={trees}>
       {reactRoot}
     </ReactFormContext.Provider>
   );

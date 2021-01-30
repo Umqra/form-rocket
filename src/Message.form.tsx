@@ -1,7 +1,7 @@
 import * as React from "react";
-import {Form} from "./Controls/Form";
+import {Form} from "./controls/Form";
+import {Line} from "./controls/Line";
 import {Array, Input} from "./TemplateControls";
-import {Line} from "./Controls/Line";
 
 interface Party {
     name: string;
@@ -24,6 +24,9 @@ interface Message {
 export const MessageTemplate = (
     <Form>
         <Line caption={"Номер заказа"}>
+            <Input path={["orderNumber"]}/>
+        </Line>
+        <Line caption={"Номер заказа (для чтения)"}>
             <Input path={["orderNumber"]}/>
         </Line>
         <Line caption={"Поставщик"}>
