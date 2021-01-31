@@ -5,29 +5,40 @@ type Tags = {
 }
 
 export interface FormTemplateControl {
-    data(): {[key: string]: any};
-    attach(update: (data: {[key: string]: any}) => void): void;
-    reset(): void;
-    update(update: {[key: string]: any}): void;
+    data(key: any): {[key: string]: any};
+    attach(key: any, update: (data: {[key: string]: any}) => void): void;
+    update(key: any, update: {[key: string]: any}): void;
+    reset(key: any): void;
 }
 
+type ControlData = {attached: null | ((data: {[key: string]: any}) => void), data: any}
+
 export function createControl(): FormTemplateControl {
-    let attached: null | ((data: {[key: string]: any}) => void) = null;
-    let data = {};
+    const controls = new Map<any, ControlData>();
     return {
-        data() {
-            return data;
+        data(key: any) {
+            if (controls.has(key)) {
+                return controls.get(key).data;
+            }
+            return {};
         },
-        attach(update: (data: { [p: string]: any }) => void) {
-            attached = update;
+        attach(key: any, update: (data: { [p: string]: any }) => void) {
+            if (!controls.has(key)) {
+                controls.set(key, {data: {}, attached: null});
+            }
+            controls.get(key).attached = update;
         },
-        reset() {
-            attached = null;
+        reset(key: any) {
+            controls.delete(key);
         },
-        update(update: { [p: string]: any }) {
-            data = update;
-            if (attached != null) {
-                attached(data);
+        update(key: any, update: { [p: string]: any }) {
+            if (!controls.has(key)) {
+                controls.set(key, {data: {}, attached: null});
+            }
+            const control = controls.get(key);
+            control.data = update;
+            if (control.attached != null) {
+                control.attached(update);
             }
         }
     }

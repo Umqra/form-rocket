@@ -1,7 +1,7 @@
 import * as React from "react";
 import {Form} from "./controls/Form";
-import {Line} from "./controls/Line";
-import {Array, Input, Label} from "./TemplateControls";
+import {Array, Input, Label, Line} from "./TemplateControls";
+import {createControl} from "./FormTemplate";
 
 interface Party {
     name: string;
@@ -21,11 +21,11 @@ interface Message {
     goodItems: GoodItem[];
 }
 
-export const orderNumberCondition = {};
+export const orderNumberCondition = createControl();
 
 export const MessageTemplate = (
     <Form>
-        <Line caption={"Номер заказа (для чтения)"}>
+        <Line caption={"Номер заказа (для чтения)"} control={orderNumberCondition}>
             <Label path={["orderNumber"]}/>
         </Line>
         <Line caption={"Номер заказа"}>

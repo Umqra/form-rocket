@@ -245,7 +245,7 @@ test("viewSubscription", () => {
     });
     const {update} = form.attach();
     update([], {users: [{name:"A"}, {name: "B"}, {name: "C"}]});
-    userNameControl.update({visibility: "hidden"});
+    userNameControl.update(form, {visibility: "hidden"});
     expect(trees.view.tryGetNode(["users", "0", "user", "name"]).data).toEqual({
         visibility: "hidden"
     });

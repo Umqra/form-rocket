@@ -39,9 +39,7 @@ export function createForm(trees: Trees, form: FormTemplate): Form {
     let internalViewNodes: Map<FormTemplate, Path[]> = new Map();
     let internalSubscriptions: Array<[Path, () => void]> = [];
     trees.connect({data: [[]], view: [[]]});
-    populateTree(trees, [], [], form, container.data);
-
-    return {
+    const readyForm: Form = {
         attach: (subscription) => {
             let currentId: number | undefined = undefined;
             if (subscription != null) {
@@ -72,6 +70,8 @@ export function createForm(trees: Trees, form: FormTemplate): Form {
             }
         }
     };
+    populateTree(trees, [], [], form, container.data);
+    return readyForm;
 
     function unsubscribeSubTree(dataTree: Tree, dataPath: Path) {
         for (const [, unsubscribe] of internalSubscriptions.filter(x => isPrefixOf(dataPath, x[0]))) {
@@ -91,7 +91,6 @@ export function createForm(trees: Trees, form: FormTemplate): Form {
 
     function freeViewSubTree(tree: Tree, viewPath: Path, form: FormTemplate) {
         if (form.control != null) {
-            form.control.reset();
             internalViewNodes.delete(form);
         }
         switch (form.kind) {
@@ -115,9 +114,9 @@ export function createForm(trees: Trees, form: FormTemplate): Form {
     }
 
     function createNode(trees: Trees, viewPath: Path, dataPath: Path, form: FormTemplate, data: any): [Path, any] {
-        trees.view.updateNode(viewPath, {tags: form.tags || {}, data: form.control?.data() || {}});
+        trees.view.updateNode(viewPath, {tags: form.tags || {}, data: form.control?.data(readyForm) || {}});
         if (form.control != null) {
-            form.control.attach(update => controlUpdate(form, update));
+            form.control.attach(readyForm, update => controlUpdate(form, update));
             if (!internalViewNodes.has(form)) {
                 internalViewNodes.set(form, []);
             }

@@ -2,7 +2,7 @@ import * as React from "react";
 import { ReactFormContext } from "../src/react/ReactFormContext";
 import {createTree} from "../src/core/Tree";
 import {processReactTemplate} from "../src/react/ReactTemplateProcessor";
-import {MessageTemplate} from "../src/Message.form";
+import {MessageTemplate, orderNumberCondition} from "../src/Message.form";
 import {createForm} from "../src/Form";
 import {linkTrees} from "../src/core/LinkedTrees";
 
@@ -27,7 +27,7 @@ export const Default = () => {
       {name: "Колбаска", gtin: "GTIN-2"}
     ]
   });
-  console.info(trees.view.tags("caption"));
+  orderNumberCondition.update(form, {visibility: "hidden"});
   return (
     <ReactFormContext.Provider value={trees}>
       {reactRoot}

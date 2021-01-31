@@ -80,6 +80,7 @@ function processReactTemplateInternal(element: React.ReactNode, viewPath: Path, 
         if (configuration != null) {
             const currentTags = createTags(element, configuration, tags);
             const updatedTags = {...tags, ...currentTags};
+            const control = props.control;
             if (configuration.kind === "view") {
                 // todo (sivukhin, 24.01.2021): why we need nanoid?
                 const viewKey = nanoid(6);
@@ -91,6 +92,7 @@ function processReactTemplateInternal(element: React.ReactNode, viewPath: Path, 
                             kind: "view",
                             viewKey: viewKey,
                             tags: currentTags,
+                            control: control,
                             children: processed.map(x => x.templateRoots).flat()
                         }
                     ],
@@ -113,6 +115,7 @@ function processReactTemplateInternal(element: React.ReactNode, viewPath: Path, 
                             viewKey: nodeKey,
                             dataPath: dataPath,
                             tags: currentTags,
+                            control: control,
                             templates: processed.map(x => x.templateRoots).flat()
                         }
                     ],
@@ -135,6 +138,7 @@ function processReactTemplateInternal(element: React.ReactNode, viewPath: Path, 
                             viewKey: nodeKey,
                             dataPath: dataPath,
                             tags: currentTags,
+                            control: control
                         }
                     ],
                     reactRoot: React.createElement(Connect, {

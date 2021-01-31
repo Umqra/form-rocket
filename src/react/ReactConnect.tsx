@@ -1,5 +1,5 @@
 import * as React from "react";
-import {FormTemplateKind} from "../FormTemplate";
+import {FormTemplateControl, FormTemplateKind} from "../FormTemplate";
 import {useFormData} from "./ReactFormHook";
 import {ReactPathContext} from "./ReactPathContext";
 import {configureComponent, ReactTemplateConfiguration} from "./ReactTemplateProcessor";
@@ -13,7 +13,7 @@ interface ConnectProps {
 }
 
 // todo (sivukhin, 25.01.2021): Add lambda-like path
-type TryAddPath<TProps, TExclude extends keyof any> = Omit<TProps, TExclude> & {path: string[]};
+type TryAddPath<TProps, TExclude extends keyof any> = Omit<TProps, TExclude> & {path?: string[], control?: FormTemplateControl};
 
 export type Template<TComponent> = TComponent extends React.ComponentType<infer TProps> ?
     React.ComponentType<TryAddPath<TProps, "value" | "visibility" | "validation" | "autoEvaluation" | "onChange">> :
@@ -26,6 +26,9 @@ export function templatify<TComponent>(component: TComponent, configuration: Rea
 
 function ConnectView(props: Omit<ConnectProps, "kind" | "dataPath"> & {children: React.ReactNode}) {
     const [, view] = useFormData({view: props.viewPath});
+    if (view.visibility === "hidden") {
+        return null;
+    }
     return React.cloneElement(props.template, {
         visibility: view.visibility,
     }, props.children);
