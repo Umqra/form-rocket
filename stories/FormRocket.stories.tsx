@@ -1,14 +1,15 @@
 import * as React from "react";
 import faker from "faker";
-import { ReactFormContext } from "../src/react/ReactFormContext";
-import {createTree, Tree} from "../src/core/Tree";
+import {ReactFormContext} from "../src/react/ReactFormContext";
+import {createTree, Path, Tree} from "../src/core/Tree";
 import {processReactTemplate} from "../src/react/ReactTemplateProcessor";
 import {createForm} from "../src/Form";
 import {linkTrees} from "../src/core/LinkedTrees";
-import {Button, Checkbox, Link, Loader, Modal, SidePage, Toggle} from "@skbkontur/react-ui";
+import {Button, Checkbox, Link, Loader, SidePage, Toggle} from "@skbkontur/react-ui";
+import {ValidationContainer} from "@skbkontur/react-ui-validations";
 import {ColumnStack, Fit, RowStack} from "@skbkontur/react-stack-layout";
 import {Form} from "../src/controls/Form";
-import {Line, Input, Label, Section, Many} from "../src/TemplateControls";
+import {Input, Label, Line, Many, Section} from "../src/TemplateControls";
 import {createControl} from "../src/FormTemplate";
 import {templatify} from "../src/react/ReactConnect";
 import {PathIndex} from "../src/controls/PathIndex";
@@ -134,7 +135,7 @@ const BigUserCardTemplate = (
       <Fit>
         <RowStack verticalAlign="center" gap={3}>
           <Fit>
-            <h2><Label path={["name"]}/> card</h2>
+            <h2><Label path={["basic", "name"]}/> card</h2>
           </Fit>
           <Fit>
             <ConfigureFieldsControl control={configureFieldsControl}/>
@@ -187,9 +188,11 @@ export const BigUserCard = () => {
     const form = createForm(trees, bigUserCardTemplate);
     const {update} = form.attach();
     update([], {
-      name: "John",
-      address: "Some street",
-      job: "Some job"
+      basic: {
+          name: "John",
+          address: "Some street",
+          job: "Some job"
+      },
     });
     configureFieldsControl.update(form, {value: trees.view});
     return {trees, form};
@@ -289,4 +292,103 @@ export const UserList = () => {
       </Loader>
   );
 }
+
+const EquationsTemplate = (
+    <table>
+        <tr>
+            <Header header="A"/>
+            +
+            <Header header="B"/>
+            =
+            <Header header="C"/>
+        </tr>
+        <Many path={["equations"]}>
+            <tr style={{verticalAlign: "middle", lineHeight: "32px"}}>
+                <Cell header="A"><Input path={["a"]}/></Cell>
+                +
+                <Cell header="B"><Input path={["b"]}/></Cell>
+                =
+                <Cell header="C"><Input path={["c"]}/></Cell>
+            </tr>
+        </Many>
+    </table>
+);
+const {templateRoot: equationsTemplate, reactRoot: equationsRoot} = processReactTemplate(EquationsTemplate);
+
+export const Equations = () => {
+    const container = React.useRef<null | ValidationContainer>();
+    const [{trees, form}] = React.useState(() => {
+        const trees = linkTrees({
+            data: createTree(),
+            view: createTree()
+        });
+        const form = createForm(trees, equationsTemplate);
+        form.attach().update([], {
+            equations: new Array(128).fill(undefined).map(_ => ({
+                a: faker.random.number(2),
+                b: faker.random.number(2),
+                c: faker.random.number(4),
+            }))
+        });
+        return {trees, form};
+    });
+
+    function validateIndex(data: any, i: number) {
+        const vars = data.equations[i];
+        if (vars.a + vars.b !== vars.c) {
+            trees.data.updateNode(
+                ["equations", i.toString(), "c"],
+                {
+                    data: {
+                        validation: {
+                            type: "submit",
+                            message: `Incorrect sum: ${vars.a} + ${vars.b} != ${vars.c}`
+                        }
+                    }
+                });
+        } else {
+            trees.data.updateNode(
+                ["equations", i.toString(), "c"],
+                {
+                    data: {
+                        validation: null
+                    }
+                });
+        }
+    }
+    React.useEffect(() => {
+        for (let i = 0; i < form.data().equations.length; i++) {
+            validateIndex(form.data(), i);
+        }
+        form.attach({
+            notify(data: any, changes: Path[]) {
+                let hasWildcard = false;
+                for (let i = 0; i < changes.length; i++) {
+                    hasWildcard = changes[i][changes[i].length - 1] === "*";
+                    if (!hasWildcard) {
+                        validateIndex(data, parseInt(changes[i][1]));
+                    }
+                }
+                if (hasWildcard) {
+                    for (let i = 0; i < data.equations.length; i++) {
+                        validateIndex(data, i);
+                    }
+                }
+            }
+        });
+    }, []);
+
+    return (
+        <>
+            <ReactFormContext.Provider value={trees}>
+                <ValidationContainer ref={container}>
+                    {equationsRoot}
+                </ValidationContainer>
+            </ReactFormContext.Provider>
+            <Button onClick={() => container?.current?.submit()}>Validate</Button>
+        </>
+    );
+}
+
+
 

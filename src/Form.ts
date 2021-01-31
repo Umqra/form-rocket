@@ -14,6 +14,7 @@ interface FormSubscriptionResult {
 }
 
 export interface Form {
+    data(): any;
     attach(subscription?: FormSubscription): FormSubscriptionResult;
 }
 
@@ -40,6 +41,9 @@ export function createForm(trees: Trees, form: FormTemplate): Form {
     let internalSubscriptions: Array<[Path, () => void]> = [];
     trees.connect({data: [[]], view: [[]]});
     const readyForm: Form = {
+        data: () => {
+            return container.data;
+        },
         attach: (subscription) => {
             let currentId: number | undefined = undefined;
             if (subscription != null) {
@@ -64,7 +68,7 @@ export function createForm(trees: Trees, form: FormTemplate): Form {
                         if (id === currentId) {
                             continue;
                         }
-                        subscription.notify(container.data, [dataPath]);
+                        subscription.notify(container.data, [[...dataPath, "*"]]);
                     }
                 },
             }

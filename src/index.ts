@@ -1,2 +1,8 @@
 import {createTree} from "./core/Tree";
-export default createTree;
+import {linkTrees} from "./core/LinkedTrees";
+import {createForm} from "./Form";
+import {processReactTemplate} from "./react/ReactTemplateProcessor";
+
+export default {
+    createTree, linkTrees, createForm, processReactTemplate
+};
