@@ -9,7 +9,7 @@ import {Button, Checkbox, Link, Loader, SidePage, Toggle} from "@skbkontur/react
 import {ValidationContainer} from "@skbkontur/react-ui-validations";
 import {ColumnStack, Fit, RowStack} from "@skbkontur/react-stack-layout";
 import {Form} from "../src/controls/Form";
-import {Input, Label, Line, Many, Section} from "../src/react/TemplateControls";
+import {Input, Label, Line, Many, Section} from "../src/react/ReactTemplateControls";
 import {createControl} from "../src/form/FormTemplate";
 import {templatify} from "../src/react/ReactConnect";
 import {PathIndex} from "../src/controls/PathIndex";
