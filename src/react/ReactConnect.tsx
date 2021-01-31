@@ -16,7 +16,7 @@ interface ConnectProps {
 type TryAddPath<TProps, TExclude extends keyof any> = Omit<TProps, TExclude> & {path: string[]};
 
 export type Template<TComponent> = TComponent extends React.ComponentType<infer TProps> ?
-    React.ComponentType<TryAddPath<TProps, "value" | "accessibility" | "validation" | "autoEvaluation" | "onChange">> :
+    React.ComponentType<TryAddPath<TProps, "value" | "visibility" | "validation" | "autoEvaluation" | "onChange">> :
     never;
 
 export function templatify<TComponent>(component: TComponent, configuration: ReactTemplateConfiguration): Template<TComponent> {
@@ -27,13 +27,13 @@ export function templatify<TComponent>(component: TComponent, configuration: Rea
 function ConnectView(props: Omit<ConnectProps, "kind" | "dataPath"> & {children: React.ReactNode}) {
     const [, view] = useFormData({view: props.viewPath});
     return React.cloneElement(props.template, {
-        accessibility: view.accessibility,
+        visibility: view.visibility,
     }, props.children);
 }
 
 function ConnectDataArray(props: Omit<ConnectProps, "kind"> & {children: React.ReactElement}) {
     const globalFormPath = React.useContext(ReactPathContext);
-    const [data, ] = useFormData({data: props.dataPath, view: props.viewPath});
+    const [data, view] = useFormData({data: props.dataPath, view: props.viewPath});
     const childrenIds = data.value;
     const wrapped = childrenIds.map((x: string) => (
         <ReactPathContext.Provider value={{
@@ -44,7 +44,7 @@ function ConnectDataArray(props: Omit<ConnectProps, "kind"> & {children: React.R
         </ReactPathContext.Provider>
     ));
     return React.cloneElement(props.template, {
-        accessibility: data.accessibility,
+        visibility: view.visibility,
         validation: data.validation,
     }, wrapped);
 }
@@ -56,7 +56,7 @@ function ConnectDataLeaf(props: Omit<ConnectProps, "kind"> & {children: React.Re
         onChange: (x: any) => setData({value: x}),
         validation: data.validation,
         autoEvaluation: data.autoEvaluation,
-        accessibility: view.accessibility,
+        visibility: view.visibility,
     }, props.children);
 }
 

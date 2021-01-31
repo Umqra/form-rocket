@@ -21,6 +21,8 @@ interface Message {
     goodItems: GoodItem[];
 }
 
+export const orderNumberCondition = {};
+
 export const MessageTemplate = (
     <Form>
         <Line caption={"Номер заказа (для чтения)"}>

@@ -1,6 +1,7 @@
 import { createForm } from "./Form";
 import { createTree } from "./core/Tree";
 import {linkTrees} from "./core/LinkedTrees";
+import {createControl} from "./FormTemplate";
 
 test("simpleForm", () => {
     const trees = linkTrees({
@@ -210,3 +211,52 @@ test("arrayNode value", () => {
     update([], {users: [{name:"A"}, {name: "C"}, {name: "D"}, {name: "E"}]});
     expect(trees.data.tryGetNode(["users"]).data.value).toEqual(["0", "1", "2", "3"]);
 });
+
+test("viewSubscription", () => {
+    const trees = linkTrees({
+        data: createTree(),
+        view: createTree()
+    })
+    const userNameControl = createControl();
+    const form = createForm(trees, {
+        kind: "view",
+        viewKey: "",
+        children: [
+            {
+                kind: "data-array",
+                viewKey: "users",
+                dataPath: ["users"],
+                templates: [
+                    {
+                        kind: "view",
+                        viewKey: "user",
+                        children: [
+                            {
+                                kind: "data-leaf",
+                                viewKey: "name",
+                                control: userNameControl,
+                                dataPath: ["user", "name"],
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    });
+    const {update} = form.attach();
+    update([], {users: [{name:"A"}, {name: "B"}, {name: "C"}]});
+    userNameControl.update({visibility: "hidden"});
+    expect(trees.view.tryGetNode(["users", "0", "user", "name"]).data).toEqual({
+        visibility: "hidden"
+    });
+    expect(trees.view.tryGetNode(["users", "1", "user", "name"]).data).toEqual({
+        visibility: "hidden"
+    });
+    expect(trees.view.tryGetNode(["users", "2", "user", "name"]).data).toEqual({
+        visibility: "hidden"
+    });
+    update([], {users: [{name: "A"}, {name: "B"}, {name: "C"}, {name: "D"}]});
+    expect(trees.view.tryGetNode(["users", "3", "user", "name"]).data).toEqual({
+        visibility: "hidden"
+    });
+})

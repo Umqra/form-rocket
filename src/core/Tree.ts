@@ -11,7 +11,7 @@ export interface TreeNode {
     data: Data;
 }
 
-type SubscriptionDependency = {kind: "data", value: string} | {kind: "tag", value: string} | {kind: "structure", value: "children"}
+export type SubscriptionDependency = {kind: "data", value: string} | {kind: "tag", value: string} | {kind: "structure", value: "children"}
 
 interface TreeSubscription {
     notify: (data: TreeNode) => void;

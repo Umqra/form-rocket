@@ -19,8 +19,8 @@ test("simple templates", () => {
             <div>
                 <ValueComponent path={["root", "component"]}/>
                 <div>
-                    <ArrayComponent path={["items"]} caption="Items">
-                        <ValueComponent path={["value"]} caption="Item"/>
+                    <ArrayComponent path={["items"]} caption="items">
+                        <ValueComponent path={["value"]} caption="item"/>
                     </ArrayComponent>
                 </div>
             </div>
@@ -59,7 +59,7 @@ test("simple templates", () => {
                             dataPath: ["value"],
                             tags: {
                                 type: ["huge"],
-                                caption: ["items", "item("]
+                                caption: ["items", "item"]
                             },
                         }
                     ]

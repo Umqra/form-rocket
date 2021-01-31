@@ -36,6 +36,7 @@ export function createForm(trees: Trees, form: FormTemplate): Form {
     let subscriptionId = 0;
     const subscriptions: Array<[number, FormSubscription]> = [];
 
+    let internalViewNodes: Map<FormTemplate, Path[]> = new Map();
     let internalSubscriptions: Array<[Path, () => void]> = [];
     trees.connect({data: [[]], view: [[]]});
     populateTree(trees, [], [], form, container.data);
@@ -58,6 +59,7 @@ export function createForm(trees: Trees, form: FormTemplate): Form {
                     const connections = trees.connections({data: [dataPath]});
                     for (const viewPath of connections.view) {
                         const [subForm, subDataPath] = getSubTree([], viewPath, [], form);
+                        freeViewSubTree(trees.view, viewPath, subForm);
                         populateTree(trees, viewPath, subDataPath, subForm, container.data);
                     }
                     for (const [id, subscription] of subscriptions) {
@@ -78,8 +80,49 @@ export function createForm(trees: Trees, form: FormTemplate): Form {
         internalSubscriptions = internalSubscriptions.filter(x => !isPrefixOf(dataPath, x[0]));
     }
 
+    function controlUpdate(form: FormTemplate, data: {[key: string]: any}) {
+        if (!internalViewNodes.has(form)) {
+            return;
+        }
+        for (const viewPath of internalViewNodes.get(form)) {
+            trees.view.updateNode(viewPath, {data: data});
+        }
+    }
+
+    function freeViewSubTree(tree: Tree, viewPath: Path, form: FormTemplate) {
+        if (form.control != null) {
+            form.control.reset();
+            internalViewNodes.delete(form);
+        }
+        switch (form.kind) {
+            case "view":
+                for (const child of form.children) {
+                    freeViewSubTree(tree, [...viewPath, child.viewKey], child);
+                }
+                return;
+            case "data-array":
+                for (const childPath of tree.children(viewPath)) {
+                    const childIndex = childPath[childPath.length - 1];
+                    for (const template of form.templates) {
+                        freeViewSubTree(tree, [...viewPath, childIndex, template.viewKey], template);
+                    }
+                }
+                return;
+            case "data-leaf":
+                return;
+        }
+
+    }
+
     function createNode(trees: Trees, viewPath: Path, dataPath: Path, form: FormTemplate, data: any): [Path, any] {
-        trees.view.updateNode(viewPath, {tags: form.tags || {}});
+        trees.view.updateNode(viewPath, {tags: form.tags || {}, data: form.control?.data() || {}});
+        if (form.control != null) {
+            form.control.attach(update => controlUpdate(form, update));
+            if (!internalViewNodes.has(form)) {
+                internalViewNodes.set(form, []);
+            }
+            internalViewNodes.get(form).push(viewPath);
+        }
         if (form.kind === "data-leaf") {
             const currentDataPath = [...dataPath, ...form.dataPath];
             const dataValue = _.get(data, currentDataPath);

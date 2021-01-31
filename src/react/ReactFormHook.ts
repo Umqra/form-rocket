@@ -39,7 +39,7 @@ export function useFormData(formPath: Partial<FormPath>): [Data, Data, (update: 
             viewSubscription = formTree.view.subscribe(viewPath, {
                 notify: (update) => setView(update.data.value),
                 dependencies: [
-                    {kind: "data", value: "accessibility"},
+                    {kind: "data", value: "visibility"},
                 ]
             })
         }
