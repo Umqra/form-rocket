@@ -1,6 +1,6 @@
 import { createForm } from "./Form";
-import { createTree } from "./core/Tree";
-import {linkTrees} from "./core/LinkedTrees";
+import { createTree } from "../core/Tree";
+import {linkTrees} from "../core/LinkedTrees";
 import {createControl} from "./FormTemplate";
 
 test("simpleForm", () => {

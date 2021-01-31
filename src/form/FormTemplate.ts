@@ -1,4 +1,4 @@
-import {Path} from "./core/Tree";
+import {Path} from "../core/Tree";
 
 type Tags = {
     [key: string]: string[];

@@ -1,8 +1,8 @@
 import * as _ from "lodash"; // todo (sivukhin, 23.01.2021): Optimize huge lodash import
 
-import {Tree, Path} from "./core/Tree";
+import {Tree, Path} from "../core/Tree";
 import {FormTemplate} from "./FormTemplate";
-import {LinkedTrees} from "./core/LinkedTrees";
+import {LinkedTrees} from "../core/LinkedTrees";
 
 interface FormSubscription {
     notify(data: any, changes: Path[]): void;

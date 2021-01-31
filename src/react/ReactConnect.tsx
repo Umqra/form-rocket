@@ -1,5 +1,5 @@
 import * as React from "react";
-import {FormTemplateControl, FormTemplateKind} from "../FormTemplate";
+import {FormTemplateControl, FormTemplateKind} from "../form/FormTemplate";
 import {useFormData} from "./ReactFormHook";
 import {ReactPathContext} from "./ReactPathContext";
 import {configureComponent, ReactTemplateConfiguration} from "./ReactTemplateProcessor";
