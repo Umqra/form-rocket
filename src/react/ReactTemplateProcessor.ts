@@ -125,7 +125,7 @@ function processReactTemplateInternal(element: React.ReactNode, viewPath: Path, 
                         dataPath: dataPath,
                         template: element,
                         key: nodeKey,
-                    }, React.createElement(React.Fragment, null, processed.map(x => x.reactRoot)))
+                    }, processed.map(x => x.reactRoot))
                 };
             } else if (configuration.kind === "data-leaf") {
                 const nodeKey = nanoid(6);
@@ -147,7 +147,24 @@ function processReactTemplateInternal(element: React.ReactNode, viewPath: Path, 
                         dataPath: dataPath,
                         template: element,
                         key: nodeKey,
-                    }, React.createElement(React.Fragment, null, children))
+                    }, children)
+                };
+            } else if (configuration.kind === "custom") {
+                const nodeKey = nanoid(6);
+                const currentViewPath = [...viewPath, nodeKey];
+                return {
+                    templateRoots: [
+                        {
+                            kind: "custom",
+                            viewKey: nodeKey,
+                            tags: currentTags,
+                            control: control
+                        }
+                    ],
+                    reactRoot: React.cloneElement(element, {
+                        viewPath: currentViewPath,
+                        key: nodeKey,
+                    }, children)
                 };
             }
         }

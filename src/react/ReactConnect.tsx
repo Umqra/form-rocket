@@ -25,11 +25,13 @@ export function templatify<TComponent>(component: TComponent, configuration: Rea
 }
 
 function ConnectView(props: Omit<ConnectProps, "kind" | "dataPath"> & {children: React.ReactNode}) {
-    const [, view] = useFormData({view: props.viewPath});
+    const [, view, _, setView] = useFormData({view: props.viewPath});
     if (view.visibility === "hidden") {
         return null;
     }
     return React.cloneElement(props.template, {
+        value: view.value,
+        onChange: (x: any) => setView(x),
         visibility: view.visibility,
     }, props.children);
 }
@@ -56,7 +58,7 @@ function ConnectDataLeaf(props: Omit<ConnectProps, "kind"> & {children: React.Re
     const [data, view, setData] = useFormData({data: props.dataPath, view: props.viewPath});
     return React.cloneElement(props.template, {
         value: data.value,
-        onChange: (x: any) => setData({value: x}),
+        onChange: (x: any) => setData(x),
         validation: data.validation,
         autoEvaluation: data.autoEvaluation,
         visibility: view.visibility,

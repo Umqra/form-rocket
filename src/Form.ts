@@ -113,7 +113,7 @@ export function createForm(trees: Trees, form: FormTemplate): Form {
 
     }
 
-    function createNode(trees: Trees, viewPath: Path, dataPath: Path, form: FormTemplate, data: any): [Path, any] {
+    function initializeNode(trees: Trees, viewPath: Path, dataPath: Path, form: FormTemplate, data: any): [Path, any] {
         trees.view.updateNode(viewPath, {tags: form.tags || {}, data: form.control?.data(readyForm) || {}});
         if (form.control != null) {
             form.control.attach(readyForm, update => controlUpdate(form, update));
@@ -124,29 +124,33 @@ export function createForm(trees: Trees, form: FormTemplate): Form {
         }
         if (form.kind === "data-leaf") {
             const currentDataPath = [...dataPath, ...form.dataPath];
-            const dataValue = _.get(data, currentDataPath);
-            trees.data.updateNode(currentDataPath, {data: {value: dataValue}})
-            const unsubscribe = trees.data.subscribe(currentDataPath, {
+            return [currentDataPath, _.get(data, currentDataPath)];
+        } else if (form.kind === "data-array") {
+            const currentDataPath = [...dataPath, ...form.dataPath];
+            return [currentDataPath, _.get(data, currentDataPath)];
+        }
+        return [dataPath, undefined];
+    }
+
+    function finalizeNode(trees: Trees, viewPath: Path, dataPath: Path, form: FormTemplate, dataValue: any) {
+        if (form.kind === "data-leaf") {
+            trees.data.updateNode(dataPath, {data: {value: dataValue}})
+            const unsubscribe = trees.data.subscribe(dataPath, {
                 notify: (node) => {
-                    container = _.set(container, ["data", ...currentDataPath], node.data.value);
+                    container = _.set(container, ["data", ...dataPath], node.data.value);
                     for (const [, subscription] of subscriptions) {
-                        subscription.notify(container.data, [currentDataPath]);
+                        subscription.notify(container.data, [dataPath]);
                     }
                 },
                 dependencies: [{kind: "data", value: "value"}]
             })
-            internalSubscriptions.push([currentDataPath, unsubscribe]);
-            trees.connect({data: [currentDataPath], view: [viewPath]});
-            return [currentDataPath, dataValue];
+            internalSubscriptions.push([dataPath, unsubscribe]);
+            trees.connect({data: [dataPath], view: [viewPath]});
         } else if (form.kind === "data-array") {
-            const currentDataPath = [...dataPath, ...form.dataPath];
-            const dataValue = _.get(data, currentDataPath);
             const nodeData = dataValue == null ? [] : Object.keys(dataValue);
-            trees.data.updateNode(currentDataPath, {data: {value: nodeData}});
-            trees.connect({data: [currentDataPath], view: [viewPath]});
-            return [currentDataPath, dataValue];
+            trees.data.updateNode(dataPath, {data: {value: nodeData}});
+            trees.connect({data: [dataPath], view: [viewPath]});
         }
-        return [dataPath, undefined];
     }
 
     function getSubTree(currentPath: Path, viewPath: Path, dataPath: Path, form: FormTemplate): [FormTemplate, Path] {
@@ -179,19 +183,23 @@ export function createForm(trees: Trees, form: FormTemplate): Form {
     }
 
     function populateTree(trees: Trees, viewPath: Path, dataPath: Path, form: FormTemplate, data: any) {
-        const [currentDataPath, nodeData] = createNode(trees, viewPath, dataPath, form, data);
+        const [currentDataPath, nodeData] = initializeNode(trees, viewPath, dataPath, form, data);
         switch (form.kind) {
             case "view":
                 for (const child of form.children) {
                     populateTree(trees, [...viewPath, child.viewKey], dataPath, child, data);
                 }
+                finalizeNode(trees, viewPath, currentDataPath, form, nodeData);
+                return;
+            case "custom":
+                finalizeNode(trees, viewPath, currentDataPath, form, nodeData);
                 return;
             case "data-array":
                 if (currentDataPath == null) {
                     throw new Error("'data-array' form node must have the dataPath");
                 }
                 if (nodeData != null && !Array.isArray(nodeData)) {
-                    throw new Error("'data-array' form node must bind to the Array object");
+                    throw new Error("'data-array' form node must bind to the Many object");
                 }
                 const itemIds = new Set();
                 const length = nodeData == null ? 0 : nodeData.length;
@@ -214,8 +222,10 @@ export function createForm(trees: Trees, form: FormTemplate): Form {
                         }
                     }
                 }
+                finalizeNode(trees, viewPath, currentDataPath, form, nodeData);
                 return;
             case "data-leaf":
+                finalizeNode(trees, viewPath, currentDataPath, form, nodeData);
                 return;
         }
     }

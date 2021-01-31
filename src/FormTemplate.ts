@@ -58,6 +58,8 @@ export type FormTemplate = {
 } | {
     kind: "data-leaf",
     dataPath: Path;
+} | {
+    kind: "custom";
 });
 
 export type FormTemplateKind = FormTemplate['kind'];

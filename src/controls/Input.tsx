@@ -1,7 +1,11 @@
+import {Input as UiInput} from "@skbkontur/react-ui";
 import * as React from "react";
 
-export function Input({value, onChange}: {value: string, onChange: (x: string) => void}) {
-    // todo (sivukhin, 25.01.2021): WTF?
-    // @ts-ignore
-    return <input value={value} onChange={e => onChange(e.target.value)}/>
+export function Input({value, visibility, onChange}: {value: string, visibility: string, onChange: (x: string) => void}) {
+    if (visibility === "hidden") {
+        return null;
+    } else if (visibility === "read-only") {
+        return <span>{value} (read-only)</span>
+    }
+    return <UiInput value={value} onValueChange={onChange}/>
 }

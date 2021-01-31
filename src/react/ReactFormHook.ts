@@ -5,7 +5,7 @@ import {FormPath, ReactPathContext} from "./ReactPathContext";
 
 type Data = {[key: string]: any} | undefined;
 
-export function useFormData(formPath: Partial<FormPath>): [Data, Data, (update: Data) => void] {
+export function useFormData(formPath: Partial<FormPath>): [Data, Data, (update: Data) => void, (update: Data) => void] {
     const globalFormPath = React.useContext(ReactPathContext);
     const formTree = React.useContext(ReactFormContext);
     const dataPath = formPath.data != null ? [...globalFormPath.data, ...formPath.data] : undefined;
@@ -27,7 +27,7 @@ export function useFormData(formPath: Partial<FormPath>): [Data, Data, (update: 
         let viewSubscription: () => void | null = null;
         if (dataPath != null) {
             dataSubscription = formTree.data.subscribe(dataPath, {
-                notify: (update) => setData(update.data.value),
+                notify: (update) => setData(update.data),
                 dependencies: [
                     {kind: "data", value: "value"},
                     {kind: "data", value: "validation"},
@@ -37,9 +37,10 @@ export function useFormData(formPath: Partial<FormPath>): [Data, Data, (update: 
         }
         if (viewPath != null) {
             viewSubscription = formTree.view.subscribe(viewPath, {
-                notify: (update) => setView(update.data.value),
+                notify: (update) => setView(update.data),
                 dependencies: [
                     {kind: "data", value: "visibility"},
+                    {kind: "data", value: "value"},
                 ]
             })
         }
@@ -57,6 +58,9 @@ export function useFormData(formPath: Partial<FormPath>): [Data, Data, (update: 
         view,
         (update) => {
             formTree.data.updateNode(dataPath, {data: {value: update}});
+        },
+        (update: Data) => {
+            formTree.view.updateNode(viewPath, {data: {value: update}});
         }
     ];
 }
