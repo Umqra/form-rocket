@@ -14,7 +14,7 @@ Some concrete examples you can find in the [storybook](./stories/FormRocket.stor
 To use full power of form-rocket you need the following things:
 
 1. First, you need to mark some controls like `template`-controls which will enable some magic for them (actually, there is no magic):
-```
+```js
 const Input = templatify(InputControl, {kind: "data-leaf"});
 const Line = templatify(LineControl, {kind: "view", tags: {caption: {kind: "fromProp", propName: "caption"}}});
 ```
