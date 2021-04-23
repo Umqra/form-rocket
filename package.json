@@ -45,6 +45,8 @@
     "@skbkontur/react-stack-layout": "^1.0.3",
     "@skbkontur/react-ui": "^2.13.0",
     "@skbkontur/react-ui-validations": "^1.4.0",
+    "effector": "^21.8.11",
+    "effector-react": "^21.3.2",
     "lodash": "^4.17.20",
     "nanoid": "^3.1.20",
     "react": "^17.0.1",
